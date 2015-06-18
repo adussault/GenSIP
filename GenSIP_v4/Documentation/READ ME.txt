@@ -1,0 +1,159 @@
+––––––––––––––––––Andrew Dussault - Last Updated April 22, 2015––––––––––––––––––––
+–––––––––––––––––Cosmochemistry Lab - Space Science Laboratories–––––––––––––––––––
+–––––––––––––––––––––––––––adussault@ssl.berkeley.edu––––––––––––––––––––––––––––––
+
+___________________________________________________________________________________
+
+	     READ ME FOR GENESIS SEM IMAGE ANALYISIS WITH GenSIP_v4:
+___________________________________________________________________________________
+
+____________
+DIRECTORIES:\______________________________________________________________________
+
+	GenSIP_v4:
+		The latest edition of the Gen SEM Image Processing package. 
+	InputPicts:
+		Directory containing images of foils to be analyzed. 
+	Output:
+		Directory where the analysis methods in GenSIP 
+		“Practice scripts” written to learn and develop the functions 
+		later incorporated into GenSIP.py
+	PPicts: 
+		Directory containing test images for the scripts in Pscripts
+
+___________________
+THE GenSIP PACKAGE:\_______________________________________________________________
+
+	________
+	MODULES:\__________________________________________________________________
+
+	dirt.py - This module contains all the methods used exclusively for dirt 
+		counting and analysis, most prominently “analyzeDirt.” It imports
+		functions.py to access all of its methods. 
+
+	molybdenum.py - This module contains all the methods used exclusively for  
+		analyzing the molybdenum loss, most prominently “analyzeMo.” It 
+		imports functions.py to access all of its methods. 
+
+	functions.py - This module contains all of the generic methods used across
+		the GenSIP package. It also imports all of the relevant python lib
+		-raries used in GenSIP, including cv2, numpy, os, and the Kuwahara
+		module contained within GenSIP.
+
+	GenGUI.py - This is a module that creates a basic GUI that allows rapid ad
+		-justments of the input parameters of various functions found with
+		-in GenSIP, and also provides a display of the foil picture so that
+		the user can immediately see the effect changing a methods paramet
+		-ers has on the image of the foil. 
+
+	Kuwahara.py - This is a module that contains a python implementation of the
+		Kuwahara filter, translated from a MatLAB file downloaded online. 
+		The original MatLAB file is contained in the Documentation directory. 
+ 
+	exampleScript.py - This contains an example script of how to run analysis 
+		using GenSIP. 
+
+	loadTestImages.py - This module simply loads a series of images into the 
+		current python interpreter environment so that the user can test 
+		various functions on them, such as through GUIfy in the GenGUI 
+		module. 
+
+	__init__.py - This is the file that allows python to treat GenSIP_v4 as a 
+		package rather than a regular directory. It contains the variable
+		__all__, which defines which modules are imported when you call:
+
+			>>> from GenSIP_v4 import all
+
+		in a python interpreter environment. You don’t generally need to 
+		touch this module.  
+	
+	____________
+	DIRECTORIES:\________________________________________________________________
+
+	Outdated - Contains old and temporary modules that no longer are needed but
+		are useful to keep around for development purposes.
+	
+	Documentation - Contains this README file and various instruction files and 
+		other text files associated with GenSIP. Also contains the original
+		Kuwahara module written in MatLAB by Luca Balbi, and its correspond
+		-ing license. 
+
+	__________________________________
+	WHAT IS WITH ALL THE “.PYC” FILES?\___________________________________________
+	
+	 The .pyc files are compiled python modules. When you first import a python 
+	module, python compiles the .py file and saves it into a .pyc file. This 
+	means that next time you import that module, the interpreter will look for
+	the .pyc file and import that, which is much faster. So be grateful and don’t 
+	worry about them. If you want to delete them, go ahead, its no big deal, but 
+	they will likely pop up again. 
+
+_______		
+SET UP:\______________________________________________________________________________
+
+
+	WHAT YOU NEED TO DO BEFORE RUNNING GenSIP FOR THE FIRST TIME ON YOUR COMPUTER:
+
+	• IF YOU ARE USING CANOPY:
+	
+	    Using the Canopy Package Manager, make sure the following packages are 
+	   installed in Canopy:
+			
+			- mahotas
+			- matplotlib
+			- numpy
+			- opencv
+			- scipy
+		
+
+	• IF YOU ARE RUNNING PYTHON IN TERMINAL:
+	
+	  1. Make sure you have installed the Homebrew package manager. In Safari, 
+	     go to “brew.sh” and follow the instructions for installing Homebrew.
+
+	  2. With Homebrew, install pip:
+		$ brew install pip
+
+	  3. With pip, install the following packages:
+
+	     Command: 	$ pip install <package>
+	     Packages:	mahotas
+			scipy
+			matplotlib
+			numpy
+
+	  4. With Homebrew, install opencv. Follow the instructions in the file
+	     “INSTALLING OPENCV.txt” included in the Documentation directory in
+	     GenSIP_v4. 
+	 
+
+
+_________________
+RUNNING ANALYSIS:\__________________________________________________________________ 
+
+	See the file “GenSIP SOP.docx”
+
+______________
+EDITING GENSIP\_______________________________________________________________________
+	
+
+	 Before you create a new version of GenSIP, make sure you have the special 
+	script “update_version.py,” which you can run from the GenesisSEMImgProc
+	directory. This will move the current version of GenSIP, GenSIP_v4, to the 
+	“Previous Versions” folder, and will create a new GenSIP_v# package, with all 
+	of the instances of “GenSIP_v4” replaced with the new GenSIP_v# in every file. 
+	This is the safest and fastest way to create a new version of GenSIP.
+
+ 	 After you have created a new version of GenSIP, go ahead and make all the 
+	changes you wanted to make. Heads up though: I am not entirely sure how the 
+	inner dynamics of Python’s interpreters work, but I have found that if I am 
+	testing the methods inside one module that imports another module, the changes
+	I make to those other modules are not necessarily reflected when I re-import
+	the updated module. Python’s built-in “reload” function is useful in this case,
+	but sometimes I have had to simply quit and restart that session of python for 
+	changes in the module code to be reflected when I rerun a module. This is esp
+	-ecially an issue with Canopy’s python Kernel. 
+	
+
+					 ___
+________________________________________/END\_________________________________________

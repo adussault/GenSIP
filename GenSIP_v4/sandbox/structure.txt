@@ -1,0 +1,48 @@
+ORGANIZATION OF METHODS IN THE SANDBOX PACKAGE
+
+newmethod.py
+def analyzeImage(image,res,MoDirt='Mo'):
+def PosterPreProc(image,**kwargs):
+def NewRegThresh(ogimage, poster, Mask=0,gaussBlur=3,MoDirt='Mo', returnData = False):
+def MakeRegions(ogimage,poster,Mask=0,gaussBlur=3):
+def FilterFeatures(sectData):
+def bigMaskEdges(image,res, maxFeatureSize=2000, Bkgrdthreshold = 95):
+
+
+binaryops.py
+def floodByThresh(img, min0, max0, d, upBound, lowBound, growthMin=0, growthMax=10000):
+def floodBySeed(img, seed, d, upBound, lowBound, growthMin=0, growthMax=10000, verbose=False):
+def FloodStep(img, seed, d, upBound, lowBound, growthMin=0, growthMax=1000, verbose=False):
+def threshold(img, MIN,MAX=255,Binary=True,Bool=False):
+def easyThresh(img, MIN,MAX,Binary=True):
+
+display.py
+def saveHist(Data,name='foil'):
+def plotAllSects(Data,PLT, val='none'):
+def plotFromDict(Data, region, PLT, smooColor = 'orange'):
+def RGBtoMoPtCrack(img):
+
+Histograms.py
+def selectDirtThresh(sectData):
+def selectPtThresh(sectData):
+def IDPeaks(img):
+def threshMo(img):
+def threshPt(img):
+def threshCrack(img):
+def findMo(img):
+
+datatools.py
+def atFWHM(histo, peakVal):
+def nsmooth(a, i=4, n=3):
+def smoothed (a, n=3):
+def movingAverage(a,n=3):
+def getMaxima(a, smoonum=4):
+def getMinima(a, smoonum=4):
+def getInflectionPoints(a, smoonum=4,sign='negative'):
+def getZeroes(a):
+
+foldertools.py
+def FILonlySubimages(contents):
+def DoForFolder(folder, function, *args,**kwargs):
+def DoImgForFolder(folderpath, function, *args,**kwargs):
+def FindMoFolder(folderpath, imgType = ".tif", color=cv2.CV_LOAD_IMAGE_GRAYSCALE):
