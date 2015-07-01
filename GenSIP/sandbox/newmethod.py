@@ -25,8 +25,50 @@ from socket import gethostname
 
 ###################################################################################
 
-def resultsToCSV(resultsDict, path, name):
-    Columns = ['SubImage']
+def resultsToCSV(resultsDict, path, name, **kwargs):
+    """
+    Takes the resultsDict from any of the newmethod functions, and creates a 
+    CSV file at the path that has a row for each subImage in a results dictionary,
+    and a column for each piece of the results data for the subImg. 
+    This function should be easily generalized to receive any dictionary with the
+    format:
+        resultsDict = {
+                    'item1':{'result1':<str or number>,
+                            ...
+                            'resultN':<str or number>
+                            },
+                            
+                            ...
+                            
+                    'itemN':{'result1':<str or number>,
+                            ...
+                            'resultN':<str or number>
+                            }  
+                        }   
+                        
+        In general 'item1' to 'itemN' will be the subimage names. 
+         
+        Inputs:
+            - resultsDict - results dictionary formatted as described above.
+            - path - the path to the folder that will contain the csv file
+            - name - Name of the test or set of images, or larger image that 
+                contains all of the subImages. 
+        Key-Word Arguments:
+            - FirstColHead = 'SubImage' - Header for the rows of items. Default
+                set to 'SubImage'
+            - FileHeader = 'Standard' - Header of the csv file. If given, should
+                be a list in which each item is a list that designates what goes
+                into that row.
+                If it is set to a string 'None', no header will be given.
+                If it is set to a string 'Standard' it will give the standard 
+                header of the format:
+                    "GenSIP newmethod Data", '', <name>
+                    "Date:", <datestring>
+                    "Computer:", <host>, "Version", <Version>],
+    """            
+    ItemHeader = kwargs.get('FirstColHead','SubImage')
+    
+    Columns = [ItemHeader]
     names = resultsDict.keys()
     names.sort()
     Rows = []
@@ -36,11 +78,11 @@ def resultsToCSV(resultsDict, path, name):
             Keys.sort()
             # Make sure all the keys in the subImg dictionary are 
             # accounted for in the Columns
-            Columns.extend([k for k in Keys if not(k in Columns)])
+            Columns.extend([k for k in Keys if (type(resultsDict[sub][k])!=dict) and not(k in Columns)])
             # Create the row in the csv file
             row = [sub]
             for col in Columns[1:]:
-                entry = resultsDict[sub].get(col,'--')
+                entry = resultsDict[sub].get(col,"'--")
                 row.append(entry)
             Rows.append(row)
     # Create csv file:
@@ -50,25 +92,29 @@ def resultsToCSV(resultsDict, path, name):
     Version = fun.getGenSIPVersion()
 
     TitleRows = [
-    ["GenSIP newmethod Data",'',name],
-    ["Date:",datestring],
-    ["Computer:",host,"Version",Version],
-    Columns]
-    
-    if not(path.endswith('/')): path = path+'/'
-    
-    resultsCSV = open(path+"Results.csv", 'w+b')
+                 ["GenSIP newmethod Data",'',name],
+                 ["Date:",datestring],
+                 ["Computer:",host,"Version",Version],
+                  Columns]
+    if path.endswith('.csv'):
+        resultsCSV = open(path, 'w+b')
+    else:
+        if not(path.endswith('/')): path = path+'/'
+        resultsCSV = open(path+"Results.csv", 'w+b')
     resWriter = csv.writer(resultsCSV)
     resWriter.writerows(TitleRows)
     resWriter.writerows(Rows)
             
-
 ###################################################################################
 
 ###################################################################################
 
-def runOnSubImgs(folderpath, maskPath, res, name, genPoster = False, exten='.tif',\
-verbose=True, genResults=True):
+def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
+                 genPoster = False, exten='.tif', verbose=True, genResults=True):
+    """
+    Runs newmethod analyzeImg on a folder of sub images.
+    
+    """
     subImgs = os.listdir(folderpath)
     subImgs = fold.FILonlySubimages(subImgs)
     masks = os.listdir(maskPath)
@@ -88,8 +134,12 @@ verbose=True, genResults=True):
         except: 
             print sub, maskPath
             return
-    outFolders = ["Output/"+name,"Output/"+name+"/DirtMaps","Output/"+name+"/PtMaps",\
-    "Output/"+name+"/PosterMaps"]
+            
+    outFolders = ["Output/"+name,
+                  "Output/"+name+"/DirtMaps",
+                  "Output/"+name+"/PtMaps",
+                  "Output/"+name+"/PosterMaps"]
+                  
     if genPoster==False:
         outFolders=outFolders[:-1]
     for f in outFolders:
@@ -103,8 +153,8 @@ verbose=True, genResults=True):
         mask = fun.loadImg(masks[i])
         if genPoster:
             PtMap, DirtMap, Data, post = analyzeImg(img,res,returnPoster=True,Mask=mask,verbose=verbose)
-            cv2.imwrite("Output/"+name+"/PosterMaps/"+subNames[i]+".png",post, \
-            [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            cv2.imwrite("Output/"+name+"/PosterMaps/"+subNames[i]+".png",
+                        post, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
         else:
             PtMap, DirtMap, Data = analyzeImg(img,res,returnPoster=False,Mask=mask,verbose=verbose)
         # Remove the results from the Data dictionary and put them in the results
@@ -121,17 +171,21 @@ verbose=True, genResults=True):
             Results[subNames[i]][reg]['DirtThresh'] = Data.get('DirtThresh',"ERROR")
             Results[subNames[i]][reg]['MoPeak'] = Data.get('MoPeak',"ERROR")
         '''
-        dis.saveHist(Data,"Output/"+name,name=subNames[i])
-        cv2.imwrite("Output/"+name+"/DirtMaps/"+subNames[i]+".png",DirtMap.astype(np.uint8)*255, \
-        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-        cv2.imwrite("Output/"+name+"/PtMaps/"+subNames[i]+".png",PtMap.astype(np.uint8)*255, \
-        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+        dis.saveHist(Data, "Output/"+name, name=subNames[i])
+        
+        cv2.imwrite("Output/"+name+"/DirtMaps/"+subNames[i]+".png",
+                    DirtMap.astype(np.uint8)*255, 
+                    [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+        cv2.imwrite("Output/"+name+"/PtMaps/"+subNames[i]+".png",
+                    PtMap.astype(np.uint8)*255, 
+                    [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+                    
     images.stitchImage("Output/"+name+"/DirtMaps")
     images.stitchImage("Output/"+name+"/PtMaps")
+    
     if genPoster:
         images.stitchImage("Output/"+name+"/PosterMaps")
     if genResults: return Results
-        
     
 ###################################################################################
 
@@ -164,6 +218,25 @@ def testonStandard (name, res, returnPoster=False, returnMask=False,verbose=True
         return errorDict,PtMap,DirtMap,Data,STDPtMap,STDDirtMap
     else:
         return errorDict,PtMap,DirtMap,Data
+        
+###################################################################################
+
+###################################################################################
+
+def anImgCalWrapper(img,res,returnPoster=False,Mask=0,verbose=True, MoDirt = 'Mo'):
+    """
+    Runs analazeImg and reformats the output for measure.compareToStandards
+    
+    """
+    PtMap, DirtMap, Data, post = analyzeImg(img,res,returnPoster=True,Mask=Mask,verbose=verbose)
+    if fun.checkMoDirt(MoDirt) == 'mo':
+        ret = [PtMap, Data,post]
+    elif fun.checkMoDirt(MoDirt)== 'dirt':
+        ret = [DirtMap, Data, post]
+    if returnPoster:
+        return tuple(ret)
+    else:
+        return tuple(ret[:-1])
 
 ###################################################################################
 
@@ -180,6 +253,8 @@ def analyzeImg(img,res,returnPoster=False,Mask=0,verbose=True):
     Data = MakeRegions(img,post,Mask=Mask)
     PtMap, DirtMap, Data = NewRegThresh(img,Data,Mask=Mask,\
     returnData=True,verbose=verbose)
+    DirtMap[DirtMap!=0]=1
+    PtMap[PtMap!=0]=1
     dirtArea, dirtNum = meas.calcDirt(DirtMap, res)
     PtArea = meas.calcExposedPt(PtMap,res)
     Data["dirtArea"] = dirtArea
@@ -294,12 +369,17 @@ def PosterPreProc(image,**kwargs):
 ###################################################################################
 
 def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose=False):
-        
+    """
+    Creates thresholded images and modifies the Data dictionary for a given image.
+    
+    """
 
     # Clean up data dictionary. Maxreg is the region with the largest area
-    Data,Maxreg = cleanUpRegData(Data)    
+    Data = cleanUpRegData(Data) 
+    Data,Maxreg = findMaxReg(Data)
+       
 
-    # Threshold the Pt
+    # Initiate the platinum, Area, Molybdenum, and Dirt Sums for each region.
     Ptsum = 0
     Allsum = 0
     MoSum = 0
@@ -336,7 +416,7 @@ def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose
         PtMap += Data[reg]['PtMap']
         DirtMap += Data[reg]['DirtMap']
         Ptsum += meas.calcExposedPt(Data[reg]['PtMap'],1)
-        DirtSum += meas.calcDirt(Data[reg]['DirtMap'],1)[0]
+        DirtSum += meas.calcDirt(Data[reg]['DirtMap'],1)[0] 
         MoSum += meas.calcExposedPt(Data[reg]["MolyMap"],1)
         
         
@@ -375,22 +455,39 @@ def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose
 ###################################################################################
 
 def cleanUpRegData(Data):
-    largest = 0
-    Maxreg = ''
+    """
+    Removes regions from the data dictionary that are not in the poster (and hence
+    simply say 'Null').
+    Runs "FilterFeatures" on the regions that are in the poster. 
+    """
+
     for reg in Data.keys():
         if Data[reg] == 'Null':
             del Data[reg]
         else:
-            numPx = sum(Data[reg]['Histogram'])
-            if numPx > largest:
-                largest = numPx
-                Maxreg = reg     
             Data[reg] = FilterFeatures(Data[reg])
+
+    return Data
+    
+def findMaxReg(Data):
+    "Finds the largest region in an image using its Data Dictionary."
+    largest = 0
+    Maxreg = ''
+    for reg in Data.keys():
+        numPx = sum(Data[reg]['Histogram'])
+        if numPx > largest:
+            largest = numPx
+            Maxreg = reg     
     if Maxreg=='':
         print "No Max region found. Set to 'Mo'."
         print largest
         print 'Keys'+str(Data.keys())
-        Maxreg = 'Mo'
+        if 'Mo' in Data.keys(): Maxreg = 'Mo'
+        else: 
+            print "'Mo' not in Data dictionary. Set to first key in Data dictionary."
+            Keys = Data.keys()
+            Keys.sort()
+            Maxreg = Keys[0]
 
     return Data,Maxreg
 

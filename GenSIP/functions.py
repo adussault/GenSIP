@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.figure as mplfig
 from scipy import misc
-from GenSIP.Kuwahara import Kuwahara
+from GenSIP.kuwahara import Kuwahara
 import os
-from time import localtime
+from time import localtime, asctime, struct_time
 
 ####################################################################################
 
@@ -173,7 +173,8 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
     if MaskEdges or type(Mask)==np.ndarray:
         
         if type(Mask)==np.ndarray:
-            assert Mask.shape == ogimage.shape, "Mask provided has different dimensions than the image to be threshed."
+            assert Mask.shape == ogimage.shape, \
+            "Mask provided has different dimensions than the image to be threshed."
             threshMask = Mask.astype(np.bool_)*blk
             
         else:
@@ -208,8 +209,7 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
         return threshedImage,threshMask
     else:
         return threshedImage
-        
-            
+  
     ###############################
         # Combine the black region with the Mask
     """
@@ -372,6 +372,32 @@ def getDateString():
 
 ####################################################################################
 
+def justFrigginGetTheNormalTime(*args):
+    """
+    Returns time in the format: 'Mon Jun 22 17:49:39 2015'
+    If called with no arguments, returns the current time in that format.
+    If called with a time as a float or a struct_time object, returns that
+    time in the specified format.
+    """
+    if args == []:
+        retTime = asctime(localtime())
+        return retTime
+    else:
+        retTimes = []
+        for arg in args:
+            if type(arg) == float:
+                retTimes.append(asctime(localtime(arg)))
+            elif type(arg) == struct_time:
+                retTimes.append(asctime(arg))
+        if len(retTimes) == 1:
+            return retTimes[0]
+        else:
+            return retTimes
+            
+####################################################################################
+
+####################################################################################
+
 def getGenSIPVersion():
     """
     This returns the string that names the current version of GenSIP. It assumes 
@@ -382,6 +408,10 @@ def getGenSIPVersion():
     for f in directories:
         if f.startswith("GenSIP_v"):
             Version = f
+            break
+        elif f.startswith("GenSIP"):
+            mod_time = justFrigginGetTheNormalTime((os.path.getmtime(f)))
+            Version = mod_time + '('+f+')'
             break
     else:
         Version = "Unknown"
@@ -408,11 +438,11 @@ def checkMoDirt(MoDirt):
     Allows for several input options for MoDirt and converts them into a standard
     parameter 'mo' or 'dirt', and raises an exception if the input is invalid.
     """
-    allowableMo = ("Mo","mo","Moly","moly","molybdenum","Molybdenum","M","m")
-    allowableDirt = ("Dirt","dirt","D","d")
-    if MoDirt in allowableMo:
+    allowableMo = ("mo","moly","molybdenum","m")
+    allowableDirt = ("dirt","d")
+    if MoDirt.lower() in allowableMo:
         return 'mo'
-    if MoDirt in allowableDirt:
+    if MoDirt.lower() in allowableDirt:
         return 'dirt'
     else:
         raise Exception("\n MoDirt must be one of the following: \n"+\
@@ -426,13 +456,12 @@ def makeDiamondKernel(radius):
     kern = np.zeros((2*radius+1,2*radius+1))
     
     for i in range(radius+1):
-        kern[radius-i:radius+i+1,i] = 1
-        kern[i,radius+i+1:radius-i] = 1
-        kern[-i,-radius-i:-radius-1+i] = 1
-        kern[-radius-i:-radius-1+i,-i]=1
+        kern[radius-i:radius+i+1, i] = 1
+        kern[i, radius+i+1:radius-i] = 1
+        kern[-i, -radius-i:-radius-1+i] = 1
+        kern[-radius-i:-radius-1+i, -i]=1
         #kern[:,radius-i]=1
     return kern.astype(np.uint8)
-    
     
 ####################################################################################
 

@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 from scipy import misc
 import GenSIP.functions as fun
 import os
-from GenSIP.sandbox.Histograms import floodBySeed
+#from GenSIP.sandbox.Histograms import floodBySeed
 
 
 """
@@ -20,6 +20,31 @@ CREATING A MASK FOR BIG FOILS\__________________________________________________
 
 """
 
+BWImgs = "InputPicts/test_imgs/particle_count"
+PlatImgs = "InputPicts/test_imgs/plat_count/"
+DirtImgs = "InputPicts/test_imgs/dirt_count/"
+
+OGimgs = [m for m in os.listdir(DirtImgs) if m.endswith('.png')]
+for img in OGimgs:
+    #os.rename(BWImgs+'/'+img,BWImgs+'/'+img[0:28]+'.png')
+    os.rename(PlatImgs+img,PlatImgs+img[0:28]+'.png')
+    os.rename(DirtImgs+img,DirtImgs+img[0:28]+'.png')
+'''
+for img in OGimgs:
+    platImg = fun.loadImg(BWImgs+'/'+img).astype(np.uint8)
+    dirtImg = platImg.copy()
+    platImg[platImg==platImg.max()]=230
+    platImg[platImg!=platImg.max()]=185
+    dirtImg[dirtImg==dirtImg.max()]=40
+    dirtImg[dirtImg!=dirtImg.max()]=185
+    cv2.imwrite(PlatImgs+img,platImg,[cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+    cv2.imwrite(DirtImgs+img,dirtImg,[cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+'''
+
+    
+
+
+'''
 def bigMaskEdges(image,res, maxFeatureSize=2000, Bkgrdthreshold = 95):
     """
     Creates a mask for masking off the edges of a large foil scan.
@@ -57,4 +82,4 @@ def bigMaskEdges(image,res, maxFeatureSize=2000, Bkgrdthreshold = 95):
     #EdgeMask=EdgeMask.astype(image.dtype)
     return EdgeMask
 
-#Test this out on a few others
+#Test this out on a few others'''

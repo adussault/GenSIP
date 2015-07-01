@@ -1,14 +1,12 @@
 # This module contains all the functions necessary for analyzing the dirt on a foil
 
-import csv
-import mahotas as mh
 import os
 import cv2
 import numpy as np
 
 import GenSIP.functions as fun
+import GenSIP.gencsv as gencsv
 import GenSIP.measure as meas
-from socket import gethostname
 
 ####################################################################################
 
@@ -16,8 +14,9 @@ from socket import gethostname
 
 def analyzeDirt(sss, res):
     """
-     This is the master script that takes in a Sample Set String and runs the comparison 
-    functions on all of the foil pictures in the before and after folders of that sample set. 
+     This is the master script that takes in a Sample Set String and runs the 
+     comparison functions on all of the foil pictures in the before and after 
+     folders of that sample set. 
         Inputs:
         - sss -  The Sample Set String, a short identifier for whichever set
                 of SEM scans you are running.
@@ -36,29 +35,7 @@ def analyzeDirt(sss, res):
     if not os.path.exists('Output/Output_'+sss+'/DirtMaps'):
         os.makedirs('Output/Output_'+sss+'/DirtMaps')
     
-    # Make dirt and Pt output csv files and corresponding writers
-    dirtcsv = open('Output/Output_'+sss+'/dirt_output_'+sss+'.csv','w+b')
-    dirtwriter = csv.writer(dirtcsv)
-   	
-        # Make header: 
-    # First line is the title and the type of foil and test run:
-    if sss.endswith("NF"):
-        dirtwriter.writerow(["GenSIP Data","non-flight foils", '',sss.strip("NF")+" Test"])
-    elif sss.endswith("F"):
-        dirtwriter.writerow(["GenSIP Data","flight foils", '',sss.strip("F")+" Test"])
-    else:
-        dirtwriter.writerow(["GenSIP Data", "Dirt", sss])
-	# Second row is the date and time of the run and the computer on which 
-	# this function was run:
-	datestring = fun.getDateString()
-	host = os.path.splitext(gethostname())[0]
-	Version = fun.getGenSIPVersion()
-	dirtwriter.writerow(["Date:", datestring, "Computer:", host, "Version:", Version])
-	
-    # Make column titles:
-    dirtwriter.writerow(['Foil #','Dirt Count Before', 'Dirt Count After', \
-    'Dirt Area Before', 'Dirt Area After', 'Approx Percent Dirt Loss by Area'])
-
+    Data = {}
     # fn stands for filename. befpics is a list of the filenames in the folder 
     # containing the before pictures
     for fn in befpics:
@@ -82,25 +59,50 @@ def analyzeDirt(sss, res):
                 afterImg = cv2.imread(aftpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
                 # Compare the two images:
                 dirtVals, dirtPicts = dirtComp(beforeImg,afterImg, res)   
-                (numbf,numaf,areabf,areaaf) = dirtVals
-                (threshedbf, threshedaf) = dirtPicts
-                # Calculate difference in area
-                if areabf!=0: # Prevents division by zero
-                    perDirtLoss = 100*(areaaf-areabf)/areabf
-        	else:
-        	    perDirtLoss = np.nan
-        	# Write the output to a new line in the csv file
-        	dirtwriter.writerow([foilnum, numbf, numaf, areabf, areaaf, perDirtLoss])
+                (numbf,
+                 numaf,
+                 areabf,
+                 areaaf,
+                 perDirtLoss) = dirtVals
+                (threshedbf, 
+                 threshedaf) = dirtPicts
+                                                
                 # Create the output images
                 # Save the threshed images for analysis
                 cv2.imwrite('Output/Output_'+sss+'/DirtMaps/'+foilnum+' before_threshed.png',\
                 threshedbf, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
                 cv2.imwrite('Output/Output_'+sss+'/DirtMaps/'+foilnum+' after_threshed.png',\
                 threshedaf, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+                
+        	# Write the output to the Data Dictionary
+        	Data[foilnum] = {'Dirt Count Before':numbf, 
+        	                 'Dirt Count After':numaf, 
+                                 'Dirt Area Before':areabf, 
+                                 'Dirt Area After':areaaf, 
+                                 'Approx Percent Dirt Loss by Area':perDirtLoss}
+                                 
             else: print "No after image for foil "+ foilnum
         else:
 	   print "Not a picture: " + fn
 	   
+	   
+    """Write the results to a .csv file"""
+    # Make dirt output csv file
+    filePath = 'Output/Output_'+sss+'/dirt_output_'+sss+'.csv'
+    dirtCSV = gencsv.DataToCSV(filePath, sss)
+    
+    # Make column titles:
+    ColHeaders = ['Foil #',
+                  'Dirt Count Before', 
+                  'Dirt Count After', 
+                  'Dirt Area Before (mm^2)', 
+                  'Dirt Area After (mm^2)', 
+                  'Approx Percent Dirt Loss by Area']
+                  
+    # Write the Data to the CSV file
+    dirtCSV.writeDataFromDict(Data,FirstColHead='Foil #',colHeads=ColHeaders)
+    dirtCSV.closeCSVFile()
+    
     # Check to see if any foils have an after picture but not a before picture:
     for fn in aftpics:
         filename,exten = os.path.splitext(fn)
@@ -116,7 +118,7 @@ def analyzeDirt(sss, res):
 
 ####################################################################################
 			
-def dirtComp (beforeImg, afterImg, res):
+def dirtComp (beforeImg, afterImg, res, MaskEdges=True):
     """
     This is the dirt compare foils function. It takes the before and after images and 
     returns the number of dirt particles and area of dirt on each foil, and 
@@ -124,25 +126,82 @@ def dirtComp (beforeImg, afterImg, res):
     """
     
     # Dirt analysis
-    bposter = fun.makePoster(beforeImg)
-    aposter = fun.makePoster(afterImg)
-    bthreshed,bmasked = fun.regionalThresh(beforeImg,bposter,p=8,d=28,m=55,pt=60,MaskEdges=True,returnMask=True,MoDirt='dirt')
-    athreshed,amasked = fun.regionalThresh(afterImg,aposter,p=8,d=28,m=55,pt=60,MaskEdges=True,returnMask=True,MoDirt='dirt')
-    areabf,numbf,sizesbf,labbf = meas.calcDirt(bthreshed, res, returnSizes=True,returnLabelled=True)
-    areaaf,numaf,sizesaf,labaf = meas.calcDirt(athreshed, res, returnSizes=True,returnLabelled=True)
-
-    bthreshed = (bmasked/255)*np.bitwise_not(bthreshed)
-    athreshed = (amasked/255)*np.bitwise_not(athreshed)
-
+    (numBef, 
+     areaBef, 
+     threshedBef, 
+     sizesBef) = dirtnalysis (beforeImg, 
+                              res, 
+                              MaskEdges=True, 
+                              retSizes=True)
+    (numAft, 
+     areaAft, 
+     threshedAft, 
+     sizesAft) = dirtnalysis (afterImg, 
+                              res, 
+                              MaskEdges=True, 
+                              retSizes=True)
+                              
+    # Calculate difference in area
+    if areaBef!=0: # Prevents division by zero
+        perDirtLoss = round(100*(areaBef-areaAft)/float(areaBef),1)
+    else:
+        perDirtLoss = np.nan
+    
     # put all results into return tuples
-    ret = (numbf,numaf,areabf,areaaf)
-    picts = (bthreshed, athreshed)
+    ret = (numBef,
+           numAft,
+           areaBef,
+           areaAft, 
+           perDirtLoss)
+           
+    picts = (threshedBef, 
+             threshedAft)
+             
     return ret, picts
 
 ####################################################################################
 
 ####################################################################################
 
+def dirtnalysis (img, res, MaskEdges=True, retSizes=False):
+    """
+    Performs dirt analysis on one image. 
+    """
+    
+    # Dirt analysis
+    threshed, masked = isolateDirt(img)
+    area,num,sizes,labelled = meas.calcDirt(threshed, 
+                                            res, 
+                                            returnSizes=True,
+                                            returnLabelled=True,
+                                            getAreaInSquaremm=True)
+    area = round(area,5)
+    threshed = (masked/255)*np.bitwise_not(threshed)
+
+    # put all results into return tuples
+    if retSizes:
+        return num, area, threshed, sizes
+    else:
+        return num, area, threshed
+
+####################################################################################
+
+####################################################################################
+
+def isolateDirt (img, MaskEdges=True):
+    poster = fun.makePoster(img)
+    threshed,masked = fun.regionalThresh(img, poster,
+                                         p=8, 
+                                         d=28,
+                                         m=55, 
+                                         pt=60,
+                                         MaskEdges=MaskEdges,
+                                         returnMask=MaskEdges,
+                                         MoDirt='dirt')
+    return threshed, masked
+'''
+EXTRA and OUTDATED CODE:
+    
 def amountDirt(img, res):
     """
     Calculates the number of dirt particles and the area of the foil covered by dirt
@@ -166,3 +225,4 @@ def amountDirt(img, res):
     return (numDirt, areaDirt, labeledFoil, sizes)
 	
 
+'''

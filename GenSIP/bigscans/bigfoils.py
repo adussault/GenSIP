@@ -1,18 +1,16 @@
+# -*- coding: utf-8 -*-
 '''
  This is the main module for analyzing the SEM scans of the large foils. 
 '''
 import cv2
 import os
-import csv
 
 import numpy as np
 import mahotas as mh
 import GenSIP.functions as fun
 import GenSIP.measure as meas
 import GenSIP.bigscans.images as images
-
-
-from socket import gethostname
+import GenSIP.gencsv as gencsv
 
 
 #Q1 = fun.loadImg("InputPicts/FoilScans/Q1/panorama.tif",0)
@@ -21,7 +19,8 @@ from socket import gethostname
 
 ################################################################################
 
-def analyzePano(panPath, maskPath, res, foilname, Quarter="", MoDirt="Mo", GenPoster=False, verbose=True):
+def analyzePano(panPath, maskPath, res, foilname, 
+                Quarter="", MoDirt="Mo", GenPoster=False, verbose=True):
     """
     This function runs full analysis on a single panorama SEM scan of a foil. 
     Essentially all this does is split up the panorama and mask images, puts 
@@ -73,7 +72,8 @@ def analyzePano(panPath, maskPath, res, foilname, Quarter="", MoDirt="Mo", GenPo
 ################################################################################
 
 
-def analyzeSubImages(panFolder,maskFolder,res, foilname,  Quarter="", MoDirt="Mo",  GenPoster=False, verbose= True):
+def analyzeSubImages(panFolder,maskFolder,res, foilname,  
+                     Quarter="", MoDirt="Mo",  GenPoster=False, verbose=False):
     """
     This function runs the analysis on all of the subimages of the panorama. It 
     writes the output to a csv file and produces images of the dirt and exposed 
@@ -111,172 +111,234 @@ def analyzeSubImages(panFolder,maskFolder,res, foilname,  Quarter="", MoDirt="Mo
     panSubs = FILonlySubimages(panSubs, limitToType=0)
     maskSubs = FILonlySubimages(maskSubs, limitToType=0)
     
+    """Create Output Folders"""
+    
     # Create output folder if it does not exist
     outFolder = 'Output/Output_'+foilname+"_"+Quarter
+    
     if not os.path.exists(outFolder):
         os.makedirs(outFolder)
     
     # Create output folder for the poster if it does not exist and is requested
     if GenPoster and not os.path.exists(outFolder+"/PosterMaps"):
         os.makedirs(outFolder+"/PosterMaps")
-        
-    ### MOLYBDENUM ________________________________________________
-    ############################################################################
-    if fun.checkMoDirt(MoDirt)=='mo':
-        
-        #Create output folder:
-        if not os.path.exists(outFolder+'/PtMaps'):
-            os.makedirs(outFolder+'/PtMaps')
-        
-        # Set up the output csv file:
-        data = open(outFolder+'/'+Quarter+'_PtData.csv','w+b')
-        Ptwriter = csv.writer(data)
-        # Make Header
-        Ptwriter.writerow(["GenSIP Pt Data","SEM Scan", foilname, Quarter])
-        datestring = fun.getDateString()
-        host = os.path.splitext(gethostname())[0]
-        Version = fun.getGenSIPVersion()
-        Ptwriter.writerow(["Date:", datestring])
-        Ptwriter.writerow(["Computer:", host, "Version:", Version])
-        Ptwriter.writerow(['SubImage #','Pt Area (mm^2)', 'Foil area','% Exposed Pt'])
-        
-        totFoilArea = 0
-        totPtArea = 0
-        
-        for sub in panSubs:
-            root,ext = os.path.splitext(sub)
-            
-            # Create the threshholded image
-            subImage = fun.loadImg(panFolder+'/'+sub,0)
-            subMask = fun.loadImg(maskFolder+'/'+sub,0)
-            proc = images.bigPostPreProc(subImage)
-            poster = images.bigPosterfy(proc)
-            if GenPoster:
-                cv2.imwrite(outFolder+'/PosterMaps/'+root+".png",poster, \
-                [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-            threshed = bigRegionalThresh(subImage,poster,Mask=subMask,\
-            p=150,d=180,m=210,hE=240,pt=253,MoDirt=MoDirt)
-            threshed = threshed.astype(np.bool_)
-            
-            # Get amount of exposed Platinum and write output to csv file:
-            
-            PixPt = np.sum(threshed)
-            AreaPt = round(PixPt*res*10**-6, 4)
-            PixFoil = np.sum(subMask.astype(np.bool_))
-            AreaFoil = round(PixFoil*res*10**-6, 4)
-            
-            if AreaFoil == 0:
-                PercPt = np.nan
-            else:
-                PercPt = round(float(AreaPt)/float(AreaFoil)*100,2)
-            Ptwriter.writerow([root,AreaPt,AreaFoil,PercPt])
-            
-            # Make output image
-            threshed=threshed.astype(np.uint8)*255
-            cv2.imwrite(outFolder+'/PtMaps/'+root+".png",threshed, \
-            [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-            
-            totPtArea = totPtArea + AreaPt
-            totFoilArea = totFoilArea + AreaFoil
-            if verbose: print sub
-            del(threshed)
-            
-        totPtArea = round(float(totPtArea)/100,2)
-        totFoilArea = round(float(totFoilArea)/100,2)
-        if totFoilArea == 0:
-            PercPt = np.nan
-        else:
-            PercPt = round(100*totPtArea/totFoilArea,2)
-        Ptwriter.writerow(["TOTALS:"])
-        Ptwriter.writerow(["Foil Area (cm^2)", totFoilArea])
-        Ptwriter.writerow(["Exposed Pt Area (cm^2)", totPtArea])
-        Ptwriter.writerow(["% Exposed Pt", PercPt])
-        images.stitchImage(outFolder+'/PtMaps')
-        
-    ### Dirt ________________________________________________________________
-    ############################################################################
     
-    elif fun.checkMoDirt(MoDirt)=='dirt':
+    # Use checkMoDirt to limit MoDirt's value to either 'mo' or 'dirt' 
+    MoDirt = fun.checkMoDirt(MoDirt)
+    
+    
+    if MoDirt=='mo':
+        MapFolder = os.path.join(outFolder,'PtMaps')
+    elif MoDirt=='dirt':  
+        MapFolder = os.path.join(outFolder,'DirtMaps')
         
-        #Create output folder:
-        if not os.path.exists(outFolder+'/DirtMaps'):
-            os.makedirs(outFolder+'/DirtMaps')
-            
-        # Set up the output csv file:
-        data = open(outFolder+'/'+Quarter+'_dirtData.csv','w+b')
-        dirtwriter = csv.writer(data)
-        # Make Header
-        dirtwriter.writerow(["GenSIP Dirt Data","SEM Scan", foilname, Quarter])
-        datestring = fun.getDateString()
-        host = os.path.splitext(gethostname())[0]
-        Version = fun.getGenSIPVersion()
-        dirtwriter.writerow(["Date:", datestring])
-        dirtwriter.writerow(["Computer:", host, "Version:", Version])
-        dirtwriter.writerow(['SubImage #',"Dirt Count","Dirt Area (microns^2)", "Foil area (mm^2)","% Covered in dirt"])
+    #Create output map folder if it does not exist:
+    if not os.path.exists(MapFolder):
+        os.makedirs(MapFolder)
+    
+    """Iterate through the sub-images in the sub image folder"""    
         
-        totFoilArea = 0
-        totDirtArea = 0
+    # Initialize the Data Dictionary, total Foil Area and total dirt/Pt area variables  
+    Data = {}
+    totFoilArea = 0
+    totArea = 0
+    AllSizes = np.zeros((0,))
+    
+    for sub in panSubs:
         
-        for sub in panSubs:
-            root,ext = os.path.splitext(sub)
-            
-            # Create the threshholded image
-            subImage = fun.loadImg(panFolder+'/'+sub,0)
-            subMask = fun.loadImg(maskFolder+'/'+sub,0)
-            proc = images.bigPostPreProc(subImage)
-            poster = images.bigPosterfy(proc)
-            threshed = bigRegionalThresh(subImage,poster,Mask=subMask,\
-            p=8,d=28,m=55,hE=60,pt=70,MoDirt=MoDirt)
-            threshed = threshed.astype(np.uint8)
+        name, ext = os.path.splitext(sub)
+        
+        subImage = fun.loadImg(panFolder+'/'+sub,0)
+        subMask = fun.loadImg(maskFolder+'/'+sub,0)
+        subMask = cv2.morphologyEx(subMask, cv2.MORPH_ERODE, np.ones((5,5)))
+        
+        # Create the threshholded image, poster, and the measurement data
+        stats, picts = ImgAnalysis(subImage, subMask, 
+                                   res, MoDirt=MoDirt, 
+                                   returnSizes=True)
+        (threshed,
+         poster) = picts
+        
+        if MoDirt=='mo': 
+            (Area,
+            AreaFoil,
+            PercPt) = stats
+
+            # Get amount of exposed Platinum and write output to csv file:
+            Data[name] = {'Pt Area (mm^2)':Area, 
+                          'Foil area (mm^2)':AreaFoil,
+                          '% Exposed Pt':PercPt}
             
             # Make output image
-            cv2.imwrite(outFolder+'/DirtMaps/'+root+".png",threshed, \
-            [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            cv2.imwrite(os.path.join(MapFolder, name+".png"),
+                        threshed,
+                        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
                         
-            if GenPoster:
-                cv2.imwrite(outFolder+'/PosterMaps/'+root+".png",poster, \
-                [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            if verbose: 
+                print sub + " Pt Area: " + str(Area) + " mm^2"
             
-            # Get amount of dirt and write output to csv file:
-            AreaDirt, numDirt,sizes,labeled = meas.calcDirt(threshed,res, \
-            returnSizes=True,returnLabelled=True, getAreaInSquaremm=False)
+        elif MoDirt=='dirt':
+            (numDirt,
+            Area,
+            AreaFoil,
+            PercDirt,
+            Sizes)  = stats
             
-            AreaDirt = round(float(AreaDirt), 6)
-            PixFoil = np.sum(subMask.astype(np.bool_))
-            AreaFoil = round(float(PixFoil)*res, 8)
-            if AreaFoil == 0:
-                PercDirt = np.nan
-            else:
-                PercDirt = round(float(AreaDirt)/float(AreaFoil)*100,2)
+            Data[name] = {"Dirt Count":numDirt,
+                          "Dirt Area (mm^2)":Area,
+                          "Foil area (mm^2)":AreaFoil,
+                          "% Covered in dirt":PercDirt}
+                          
+            # Make output image(s)
+            cv2.imwrite(os.path.join(MapFolder,name+".png"),
+                        threshed,
+                        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            AllSizes = np.append(AllSizes, Sizes)
+            if verbose: 
+                print sub +" dirt count: " + str(numDirt)
                 
-            dirtwriter.writerow([root,numDirt, AreaDirt,round(float(AreaFoil)*10**-6,2),PercDirt])
+        totArea += Area
+        totFoilArea += AreaFoil
+        
+        if GenPoster:
+            cv2.imwrite(outFolder+'/PosterMaps/'+name+".png", 
+                        poster, 
+                        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
             
-            totDirtArea = totDirtArea + AreaDirt*10**-6
-            totFoilArea = totFoilArea + AreaFoil*10**-6
-            if verbose: print sub +" dirt count: " + str(numDirt)
-
-            del(threshed)
-            
-        # Calculate Totals and write the last few rows of the csv file. 
-        totDirtArea = round(float(totDirtArea)/100,4)
-        totFoilArea = round(float(totFoilArea)/100,2)
-        if totFoilArea == 0:
-                PercDirt = np.nan
-        else:
-            PercDirt = round(100*totDirtArea/totFoilArea,2)
-        dirtwriter.writerow(["TOTALS:"])
-        dirtwriter.writerow(["Foil Area (cm^2)", totFoilArea])
-        dirtwriter.writerow(["Exposed Dirt Area (cm^2)", totDirtArea])
-        dirtwriter.writerow(["% Covered in Dirt", PercDirt])
-        data.close()
-        images.stitchImage(outFolder+'/DirtMaps')
+        del(threshed)
+        del(poster)
+        
+    # Stitch together montage images
+    images.stitchImage(MapFolder)
+    
     if GenPoster:
         images.stitchImage(outFolder+'/PosterMaps')
+    
+    """ Calculate the Totals """ 
+    if totFoilArea == 0:
+        Perc = np.nan
+    else:
+        Perc = round(100*totArea/totFoilArea,2)
+    
+    totArea = round(float(totArea)/100,4)
+    totFoilArea = round(float(totFoilArea)/100,2)
+
+    # ColHeaders = ['SubImage #']
+    # ColHeaders.extend(Data[name].keys())
+    """ Prepare Totals for Incorporation into the CSV file """
+    if MoDirt=='mo':
+        ColHeaders = ['SubImage #',
+                      'Pt Area (mm^2)',
+                      'Foil area (mm^2)',
+                      '% Exposed Pt']
+                        
+        Data["TOTALS"] = {"Foil Area (cm^2)":totFoilArea,
+                          "Exposed Pt Area (cm^2)":totArea,
+                          "% Exposed Pt":Perc}
+                            
+        
+    elif MoDirt=='dirt':
+        ColHeaders = ['SubImage #',
+                      "Dirt Count",
+                      "Dirt Area (mm^2)", 
+                      "Foil area (mm^2)",
+                      "% Covered in dirt"]
+                      
+        Data['TOTALS'] = {"Foil Area (cm^2)":totFoilArea,
+                          "Exposed Dirt Area (cm^2)":totArea,
+                          "% Covered in Dirt":Perc}
+        meas.makeSizeHistogram(AllSizes, res, Quarter,outFolder)
+
+            
+    # Create CSV File and write Data to it.
+    title = Quarter + " " + MoDirt + " Data"
+    filePath = outFolder+'/'+Quarter+'_'+MoDirt+'Data.csv'
+    bigCSV = gencsv.DataToCSV(filePath, title)
+    bigCSV.writeDataFromDict(Data, colHeads=ColHeaders)
+    bigCSV.closeCSVFile()
+    
+
 
 ################################################################################
 
 ################################################################################
 
+def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizes=False):
+    threshed, poster = threshImage(img, Mask=mask,MoDirt=MoDirt)
+    PixFoil = np.sum(mask.astype(np.bool_))
+    AreaFoil = round(PixFoil*res*10**-6, 4)
+    
+    if fun.checkMoDirt(MoDirt)=='mo':
+        Area = meas.calcExposedPt(threshed, res, getAreaInSquaremm=True)
+        stats = []
+        returnSizes = False
+    else:
+        Area, numDirt,sizes,labeled = meas.calcDirt(threshed,
+                                                    res, 
+                                                    returnSizes=True,
+                                                    returnLabelled=True, 
+                                                    getAreaInSquaremm=True)
+        Area = round(float(Area), 6)
+        stats = [numDirt]
+        
+    if AreaFoil == 0:
+        Perc = 0
+    else:
+        Perc = round(float(Area)/float(AreaFoil)*100,2)
+    
+    stats.extend([Area,
+                  AreaFoil,
+                  Perc])
+                  
+    if returnSizes: stats.append(sizes)
+       
+    threshed[threshed!=0]=255
+
+    picts = (threshed, 
+             poster)
+             
+    return tuple(stats), picts
+
+################################################################################
+
+################################################################################
+
+
+def threshImage(img, Mask=False,MoDirt='mo'):
+    """
+    Takes an image and optional mask and MoDirt option and preprocesses the image
+    and performs regionalThresh on it, and returns the trhesholded image and the 
+    poster. 
+    """
+    proc = images.bigPostPreProc(img)
+    poster = images.bigPosterfy(proc)
+    
+    if fun.checkMoDirt(MoDirt)=='mo':
+        threshed = bigRegionalThresh(img,poster,
+                                     Mask=Mask,
+                                     p=150,
+                                     d=180,
+                                     m=210,
+                                     hE=240,
+                                     pt=253,
+                                     MoDirt=MoDirt)
+                                     
+    elif fun.checkMoDirt(MoDirt)=='dirt':
+        threshed = bigRegionalThresh(img,poster,
+                                     Mask=Mask,
+                                     p=8,
+                                     d=28,
+                                     m=55,
+                                     hE=60,
+                                     pt=70,
+                                     MoDirt=MoDirt)
+                                     
+    threshed = threshed.astype(np.uint8)
+    return threshed, poster
+
+################################################################################
+
+################################################################################
 
 def bigRegionalThresh(ogimage,poster,p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,threshType=0L,Mask=0,GetMask=0,MoDirt="Mo"):
     """
@@ -375,30 +437,39 @@ def bigRegionalThresh(ogimage,poster,p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,thres
 
 ################################################################################
 
-def bigAmountDirt(img):
-    """
-    OBSLETE. TRANSITIONED TO measure.calcDirt.
-    Calculates the number of dirt particles and the area of the foil covered by dirt
-    Takes a black and white image (black dirt on white foil)
-    Returns the number of dirt particles, the area of dirt particles, and a labelled image
-    inverse the colors since mahotas.label only works on white on black
-    """
-    #inv = cv2.bitwise_not(img)
-    inv=img.copy()
-    #invDirt = cv2.bitwise_not(isoDirt(img,profile))
-    labeledFoil,numDirt = mh.label(inv)
-    # Don't count the foil in numDirt:
-    
-    #Calculate the area of the dirt using Findcontours
-    sizes = mh.labeled.labeled_size(labeledFoil)
-    # Sort sizes of particles by size in descending order:
-    sizes = np.sort(sizes)[::-1]
-    # Eliminate the foil from the "sizes" array:
-    sizes = sizes[2:]
-    # Total area of dirt is equal to the sum of the sizes.
-    areaDirt = sum(sizes)
-    return (numDirt, areaDirt)
 
+#Also can be found in sandbox.foldertools. Will probably consolidate that later.
+def FILonlySubimages(contents, limitToType=0):
+    '''
+    Takes a list of folder contents and returns only the items that are subImages
+    Kwargs:
+         - limitToType - if limitToType is a string, return only items ending with
+                         that string, i.e. limitToType = '.tif' filters all but .tif
+                         files.
+                       - limitToType can also be a list, set, or tuple of strings
+                       - if limitToType is anything else, it will not do anything
+    '''
+    contents[:] = [img for img in contents if img.startswith("sub_")]
+    if type(limitToType) in (list, tuple, set):
+        contents[:] = [img for img in contents if os.path.splitext(img) in limitToType]
+    elif type(limitToType)==str:
+        contents[:] = [img for img in contents if img.endswith(limitToType)]
+    return contents
+
+''' 
+EXTRA CODE:
+       
+def test(subfolder):
+    contents = os.listdir(subfolder)
+    data = open("data.csv","w+b")
+    writer = csv.writer(data)
+    writer.writerow(["Foilnum","Count","Area"])
+    for sub in contents:
+        image = fun.loadImg(subfolder+"/"+sub,0)
+        numDirt, areaDirt = bigAmountDirt(image)
+        print sub + " Count: "+str(numDirt)+" Area: "+str(areaDirt)
+        writer.writerow([sub, numDirt, areaDirt])
+        
 ################################################################################
 
 ################################################################################
@@ -437,41 +508,35 @@ def countDirt(threshed, subMask,res=4,verbose=True):
     else:
         PercDirt = round(float(AreaDirt)/float(AreaFoil)*100,2)
     return PercDirt
+def bigAmountDirt(img):
+    """
 
-################################################################################
+    OBSLETE. TRANSITIONED TO measure.calcDirt.
+    Calculates the number of dirt particles and the area of the foil covered by dirt
+    Takes a black and white image (black dirt on white foil)
+    Returns the number of dirt particles, the area of dirt particles, and a labelled image
+    inverse the colors since mahotas.label only works on white on black
 
-################################################################################
-# Also can be found in sandbox.foldertools. Will probably consolidate that later.
-def FILonlySubimages(contents, limitToType=0):
-    '''
-    Takes a list of folder contents and returns only the items that are subImages
-    Kwargs:
-         - limitToType - if limitToType is a string, return only items ending with
-                         that string, i.e. limitToType = '.tif' filters all but .tif
-                         files.
-                       - limitToType can also be a list, set, or tuple of strings
-                       - if limitToType is anything else, it will not do anything
-    '''
-    contents[:] = [img for img in contents if img.startswith("sub_")]
-    if type(limitToType) in (list, tuple, set):
-        contents[:] = [img for img in contents if os.path.splitext(img) in limitToType]
-    elif type(limitToType)==str:
-        contents[:] = [img for img in contents if img.endswith(limitToType)]
-    return contents
-
+    """
+    #inv = cv2.bitwise_not(img)
+    inv=img.copy()
+    #invDirt = cv2.bitwise_not(isoDirt(img,profile))
+    labeledFoil,numDirt = mh.label(inv)
+    # Don't count the foil in numDirt:
     
-"""
-EXTRA CODE:
-       
-def test(subfolder):
-    contents = os.listdir(subfolder)
-    data = open("data.csv","w+b")
-    writer = csv.writer(data)
-    writer.writerow(["Foilnum","Count","Area"])
-    for sub in contents:
-        image = fun.loadImg(subfolder+"/"+sub,0)
-        numDirt, areaDirt = bigAmountDirt(image)
-        print sub + " Count: "+str(numDirt)+" Area: "+str(areaDirt)
-        writer.writerow([sub, numDirt, areaDirt])
-        
-"""
+    #Calculate the area of the dirt using Findcontours
+    sizes = mh.labeled.labeled_size(labeledFoil)
+    # Sort sizes of particles by size in descending order:
+    sizes = np.sort(sizes)[::-1]
+    # Eliminate the foil from the "sizes" array:
+    sizes = sizes[2:]
+    # Total area of dirt is equal to the sum of the sizes.
+    areaDirt = sum(sizes)
+    return (numDirt, areaDirt)
+
+
+################################################################################
+
+################################################################################
+
+'''    
