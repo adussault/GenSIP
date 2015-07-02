@@ -54,11 +54,11 @@ def analyzePano(panPath, maskPath, res, foilname,
     """
     print "MoDirt:  " + MoDirt
     panorama = fun.loadImg(panPath, 0)
-    images.splitImage(panorama, 256, path="InputPicts/FoilScans/"+foilname, extra=Quarter)
+    images.splitImage(panorama, 256, path="InputPicts/FoilScans/"+foilname, name=Quarter)
     del(panorama)
     
     mask = fun.loadImg(maskPath, 0)
-    images.splitImage(mask, 256, path="InputPicts/FoilScans/"+foilname, extra=Quarter+"_mask")
+    images.splitImage(mask, 256, path="InputPicts/FoilScans/"+foilname, name=Quarter+"_mask")
     del(mask)
     
     panFolder = "InputPicts/FoilScans/"+foilname+"/sub_imgs_"+Quarter
@@ -72,7 +72,7 @@ def analyzePano(panPath, maskPath, res, foilname,
 ################################################################################
 
 
-def analyzeSubImages(panFolder,maskFolder,res, foilname,  
+def analyzeSubImages(panFolder, maskFolder, res, foilname,  
                      Quarter="", MoDirt="Mo",  GenPoster=False, verbose=False):
     """
     This function runs the analysis on all of the subimages of the panorama. It 
@@ -114,7 +114,7 @@ def analyzeSubImages(panFolder,maskFolder,res, foilname,
     """Create Output Folders"""
     
     # Create output folder if it does not exist
-    outFolder = 'Output/Output_'+foilname+"_"+Quarter
+    outFolder = 'Output/Output_'+foilname+"/"+Quarter
     
     if not os.path.exists(outFolder):
         os.makedirs(outFolder)

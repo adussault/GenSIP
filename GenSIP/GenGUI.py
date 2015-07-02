@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import mahotas as mh
 from scipy import misc
 import GenSIP.functions as fun
-import GenSIP.Kuwahara as Kuwahara
+from GenSIP.kuwahara import Kuwahara
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import numpy as np
@@ -38,7 +38,7 @@ def GUIfy(image):
         global a
         global canvas
         global toolbar
-        root2=Tk()
+        root2=Tk.Tk()
         f = Figure()
         a = f.add_subplot(111)
         a.imshow(image,"gray")
@@ -317,13 +317,13 @@ def GUIfy(image):
         BLUR.grid(row=2,column=2,columnspan=1)
         
         v = Tk.IntVar()
-        Tk.RadioTk.Button(root2, text="Binary", variable=v, value=0).grid(row=4,column=0)
-        Tk.RadioTk.Button(root2, text="Binary Inverse", variable=v, value=1).grid(row=4,column=1)
-        Tk.RadioTk.Button(root2, text="Truncated", variable=v, value=2).grid(row=5,column=0)
-        Tk.RadioTk.Button(root2, text="To Zero", variable=v, value=3).grid(row=5,column=1)
-        Tk.RadioTk.Button(root2, text="To Zero Inverse", variable=v, value=4).grid(row=6,column=0)
-        Tk.RadioTk.Button(root2, text="Mask", variable=v, value=7).grid(row=6,column=1)
-        Tk.RadioTk.Button(root2, text="Otsu", variable=v, value=8).grid(row=7,column=0)
+        Tk.Radiobutton(root2, text="Binary", variable=v, value=0).grid(row=4,column=0)
+        Tk.Radiobutton(root2, text="Binary Inverse", variable=v, value=1).grid(row=4,column=1)
+        Tk.Radiobutton(root2, text="Truncated", variable=v, value=2).grid(row=5,column=0)
+        Tk.Radiobutton(root2, text="To Zero", variable=v, value=3).grid(row=5,column=1)
+        Tk.Radiobutton(root2, text="To Zero Inverse", variable=v, value=4).grid(row=6,column=0)
+        Tk.Radiobutton(root2, text="Mask", variable=v, value=7).grid(row=6,column=1)
+        Tk.Radiobutton(root2, text="Otsu", variable=v, value=8).grid(row=7,column=0)
         
         
         Update = Tk.Button(root2, text="Threshold", command=Thresh)
@@ -424,7 +424,7 @@ def GUIfy(image):
             gauss=BLUR.get()
             thrshType=long(v.get())
             global threshed
-            threshed = regionalThresh(image,poster,p,d,m,pt,gauss,thrshType,True)
+            threshed = fun.regionalThresh(image,poster,p,d,m,pt,gauss,thrshType,True)
             a.imshow(threshed,"gray")
             a.figure.canvas.draw()
         
@@ -519,15 +519,15 @@ def GUIfy(image):
         G2.grid(row=4,column=4)
         
         
-        ####### Tk.RadioTk.ButtonS #######
+        ####### Tk.RadiobuttonS #######
         
         v = Tk.IntVar()
-        Tk.RadioTk.Button(root2, text="Binary", variable=v, value=0).grid(row=1,column=3)
-        Tk.RadioTk.Button(root2, text="Binary Inverse", variable=v, value=1).grid(row=2,column=3)
-        Tk.RadioTk.Button(root2, text="Truncated", variable=v, value=2).grid(row=3,column=3)
-        Tk.RadioTk.Button(root2, text="To Zero", variable=v, value=3).grid(row=4,column=3)
-        Tk.RadioTk.Button(root2, text="To Zero Inverse", variable=v, value=4).grid(row=5,column=3)
-        Tk.RadioTk.Button(root2, text="Otsu", variable=v, value=8).grid(row=6,column=3)
+        Tk.Radiobutton(root2, text="Binary", variable=v, value=0).grid(row=1,column=3)
+        Tk.Radiobutton(root2, text="Binary Inverse", variable=v, value=1).grid(row=2,column=3)
+        Tk.Radiobutton(root2, text="Truncated", variable=v, value=2).grid(row=3,column=3)
+        Tk.Radiobutton(root2, text="To Zero", variable=v, value=3).grid(row=4,column=3)
+        Tk.Radiobutton(root2, text="To Zero Inverse", variable=v, value=4).grid(row=5,column=3)
+        Tk.Radiobutton(root2, text="Otsu", variable=v, value=8).grid(row=6,column=3)
         
         ###############################
         #######     Tk.ButtonS     #######
@@ -564,7 +564,7 @@ def GUIfy(image):
         root2.mainloop()
         
     # Startup window
-    root1 = Tk()
+    root1 = Tk.Tk()
     FC = Tk.Button(root1, text="FindContours", command=GUIconts)
     FC.grid(row=0,column=0)
     AT = Tk.Button(root1, text="Adaptive Threshold", command=GUIadptrsh)
