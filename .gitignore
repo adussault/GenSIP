@@ -1,0 +1,14 @@
+*.pyc
+InputPicts/*
+Misc/*
+Notebook/*
+Output/*
+Previous versions/*
+export_genSIP.py
+genSIPcanovenv/*
+genSIPvenv/*
+session6_2.py
+standards/*
+temp/*
+test.csv
+update_version.py
