@@ -212,39 +212,7 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
   
     ###############################
         # Combine the black region with the Mask
-    """
-    if type(Mask)==np.ndarray:
-        threshMask = Mask.astype(np.bool_)
-        masked = Image*threshMask
-        comb = (blk.astype(np.bool_))*threshMask
-        comb =comb.astype(np.uint8)
-        comb[comb!=0]=255
-        if MaskEdges:
-            threshedImage = threshMask*threshedImage
-            threshedImage = threshedImage+cv2.bitwise_not(comb)
-    else:
-        if MaskEdges:
-        # Impose the masked edge:
-            masked,threshMask = maskEdge(ogimage)
-            threshMask[threshMask!=0]=1
-            threshedImage = threshMask*threshedImage
-        # Eliminate the black background so only dirt particles/Pt particles are visible
-            comb = (blk/255)*threshMask
-            threshedImage = threshedImage+cv2.bitwise_not(comb)
-            
-    if checkMoDirt(MoDirt) =='dirt':
-        # Invert the image so it comes out as white dirt on black
-        threshedImage = np.bitwise_not(threshedImage)
-        # Dirt particle counting requires an 8-bit image with white as 255
-        threshedImage = threshedImage.astype(np.uint8)
-        threshedImage[threshedImage!=0]=255
 
-
-    if returnMask:
-        return threshedImage,comb
-    else:
-        return threshedImage
-    """
 ####################################################################################
 
 ####################################################################################
@@ -453,6 +421,18 @@ def checkMoDirt(MoDirt):
 
 ####################################################################################
 def makeDiamondKernel(radius):
+    """ 
+    Creates a diamond shape kernel given the radius.
+    Example:
+        >>> makeDiamondKernel(2)
+    array([[ 0.,  0.,  1.,  0.,  0.],
+           [ 0.,  1.,  1.,  1.,  0.],
+           [ 1.,  1.,  1.,  1.,  1.],
+           [ 0.,  1.,  1.,  1.,  0.],
+           [ 0.,  0.,  1.,  0.,  0.]])
+    """
+            
+        
     kern = np.zeros((2*radius+1,2*radius+1))
     
     for i in range(radius+1):
@@ -466,28 +446,7 @@ def makeDiamondKernel(radius):
 ####################################################################################
 
 ####################################################################################
-    
-'''
-##OUTDATED FUNCTIONS##
-def filterAndThresh(img, gaussBlur=3):
-#Separate function for applying the proper filtering and thresholding to the cropped foil image so the dirt can be counted
-# Image must be imported as grayscale
-# gaussBlur is the variabel associated with the size of the Gaussian Blur, default set to 3
-	# Make a copy of the image so we do not affect the original. Not sure if this step is necessary.
-	# imageF = filtered image
-	imageF = img.copy()
-	# Apply the filter to the image. A 3x3 Gaussian filter seems most appropriate as/
-	# it allows for the detection of most small dirt particles while eliminating most/
-	# anomalies associated with the Moly surface texture and scratches.
-	# Will eliminate any dirt particles that are 2x1 pixels or less
-	imageF = cv2.GaussianBlur(imageF, (gaussBlur,gaussBlur), 0)
-	# Threshold the image
-	# imageFT = filtered and thresholded image. 
-	# Currently using Otsu's method for image thresholding
-	ret,imageFT = cv2.threshold(imageF,0,255,cv2.THRESH_OTSU)
-	# Return the filtered and thresholded image
-	return imageFT
-'''
+
 def FizzBuzz():
     for i in range(1,101):
         if i%3==0:
