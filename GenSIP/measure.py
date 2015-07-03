@@ -122,6 +122,28 @@ def calcDirt(img, res, **kwargs):
     if returnLabelled:
         ret.append(labeledFoil)
     return tuple(ret)
+    
+####################################################################################
+
+####################################################################################
+
+def getDirtSizeData(DirtSizes, res):
+    if DirtSizes.size==0:
+        MeanSize = "'--"
+        MaxSize = "'--"
+        percAreaOver100 = "'--"
+    else:
+        DirtSizes = DirtSizes*res
+        MeanSize = round(DirtSizes.mean(),1)
+        MaxSize = DirtSizes.max()
+        # Number of Particles with a diameter approximately over 100 microns,
+        # Corresponding to an area of ~7854 square microns. 
+        numOver100 = DirtSizes[DirtSizes>7850].size
+        areaOver100 = DirtSizes[DirtSizes>7850].sum()
+        percAreaOver100 = round(100*(float(areaOver100)/(DirtSizes.sum())),2)
+        
+    return MeanSize, MaxSize, percAreaOver100
+
 ####################################################################################
 
 ####################################################################################

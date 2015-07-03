@@ -142,7 +142,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
     Data = {}
     totFoilArea = 0
     totArea = 0
-    AllSizes = np.zeros((0,))
+    #AllSizes = np.zeros((0,))
     
     for sub in panSubs:
         
@@ -153,13 +153,18 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
         subMask = cv2.morphologyEx(subMask, cv2.MORPH_ERODE, np.ones((5,5)))
         
         # Create the threshholded image, poster, and the measurement data
+        # ImgAnalysis always outputs two tuples: stats and picts
         stats, picts = ImgAnalysis(subImage, subMask, 
                                    res, MoDirt=MoDirt, 
-                                   returnSizes=True)
+                                   returnSizeData=True)
+                                   
+        # Extract the thresholded image and poster from the picts tuple
         (threshed,
          poster) = picts
         
         if MoDirt=='mo': 
+            """Molybdenum Analysis"""
+            
             (Area,
             AreaFoil,
             PercPt) = stats
@@ -178,22 +183,31 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
                 print sub + " Pt Area: " + str(Area) + " mm^2"
             
         elif MoDirt=='dirt':
+            """Dirt Analysis"""
+            
             (numDirt,
             Area,
             AreaFoil,
             PercDirt,
-            Sizes)  = stats
+            SizeData)  = stats
+            
+            (MeanSize, 
+             MaxSize, 
+             percAreaOver100) = SizeData
             
             Data[name] = {"Dirt Count":numDirt,
                           "Dirt Area (mm^2)":Area,
                           "Foil area (mm^2)":AreaFoil,
-                          "% Covered in dirt":PercDirt}
+                          "% Covered in dirt":PercDirt,
+                          'Mean Particle Area (micron^2)':MeanSize,
+                          'Max Particle Area (micron^2)':MaxSize,
+                          'Approx % Parts. w/ >100micron diam.':percAreaOver100}
                           
             # Make output image(s)
             cv2.imwrite(os.path.join(MapFolder,name+".png"),
                         threshed,
                         [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-            AllSizes = np.append(AllSizes, Sizes)
+            #AllSizes = np.append(AllSizes, Sizes)
             if verbose: 
                 print sub +" dirt count: " + str(numDirt)
                 
@@ -242,12 +256,15 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
                       "Dirt Count",
                       "Dirt Area (mm^2)", 
                       "Foil area (mm^2)",
-                      "% Covered in dirt"]
+                      "% Covered in dirt",
+                      'Mean Particle Area (micron^2)',
+                      'Max Particle Area (micron^2)',
+                      'Approx % Parts. w/ >100micron diam.']
                       
         Data['TOTALS'] = {"Foil Area (cm^2)":totFoilArea,
                           "Exposed Dirt Area (cm^2)":totArea,
                           "% Covered in Dirt":Perc}
-        meas.makeSizeHistogram(AllSizes, res, Quarter,outFolder)
+        #meas.makeSizeHistogram(AllSizes, res, Quarter,outFolder)
 
             
     # Create CSV File and write Data to it.
@@ -263,23 +280,34 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
 
 ################################################################################
 
-def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizes=False):
+def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False):
+    
+    MoDirt = fun.checkMoDirt(MoDirt)
     threshed, poster = threshImage(img, Mask=mask,MoDirt=MoDirt)
     PixFoil = np.sum(mask.astype(np.bool_))
     AreaFoil = round(PixFoil*res*10**-6, 4)
     
-    if fun.checkMoDirt(MoDirt)=='mo':
+    if MoDirt=='mo':
         Area = meas.calcExposedPt(threshed, res, getAreaInSquaremm=True)
         stats = []
-        returnSizes = False
-    else:
+        returnSizeData = False
+        
+    elif MoDirt =='dirt':
         Area, numDirt,sizes,labeled = meas.calcDirt(threshed,
                                                     res, 
                                                     returnSizes=True,
                                                     returnLabelled=True, 
                                                     getAreaInSquaremm=True)
+                                                    
+        (MeanSize, 
+         MaxSize, 
+         percAreaOver100) = meas.getDirtSizeData(sizes, res)
+        
+        SizeData = (MeanSize, MaxSize, percAreaOver100)
+        
         Area = round(float(Area), 6)
         stats = [numDirt]
+        
         
     if AreaFoil == 0:
         Perc = 0
@@ -290,7 +318,7 @@ def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizes=False):
                   AreaFoil,
                   Perc])
                   
-    if returnSizes: stats.append(sizes)
+    if returnSizeData: stats.append(SizeData)
        
     threshed[threshed!=0]=255
 

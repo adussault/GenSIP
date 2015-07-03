@@ -24,10 +24,14 @@ def analyzeImgOrFolder (path, res, **kwargs):
     MoDirt=kwargs.get('MoDirt', 'Mo')
     Mask=kwargs.get('Mask', 0)
     genPoster=kwargs.get('genPoster', False)
+    
+    # Standardize MoDirt to 'mo' or 'dirt' using checkMoDirt
     MoDirt = fun.checkMoDirt(MoDirt)
     
     filetypes = ['.tif', '.jpg', '.jpeg','.tiff']
     
+    # Standardize the path string, and extract the name of the folder or image 
+    # file depending on whether the path is the path to a directory or image. 
     if os.path.isdir(path):
         if path.endswith('/'):
             path = path[:-1]
@@ -39,6 +43,7 @@ def analyzeImgOrFolder (path, res, **kwargs):
     else: 
         raise Exception("Invalid path name: %s" % path)
         
+    # Generate output folders
     outFolder = "Output/Output_"+name
     
     if genPoster: posterFolder = outFolder+'/PosterMaps/'
@@ -52,16 +57,24 @@ def analyzeImgOrFolder (path, res, **kwargs):
     if not os.path.exists(mapFolder): os.makedir(mapFolder)
     if genPoster and not os.path.exists(posterFolder): os.makedir(posterFolder)
     
+    """Create Data Dictionary"""
+    # Iterate through the images within a folder if the path is to a directory, 
+    # and run analyzeImg on each of image, then write the results to the Data 
+    # Dictionary. 
     Data = {}
     if os.path.isdir(path):
+        # Get list of images in directory
         images = [f for f in os.listdir(path) if os.path.splitext(f)[1] in filetypes]
+        # Create paths to those images
         imgPaths = [os.path.join(path,f) for f in images]
         
         for i in range(len(images)):
+            # run analysis on the image
             statsDict, picts = analyzeImage(imgPaths[i], res, 
                                             method=method, MoDirt=MoDirt, 
                                             Mask=Mask)
             imgName = os.path.splitext(images[i])[0]
+            # Assign to Data Dictionary
             Data[imgName] = statsDict
             (threshed,
              poster) = picts
@@ -72,6 +85,7 @@ def analyzeImgOrFolder (path, res, **kwargs):
                 cv2.imwrite(posterFolder+name+'.png',
                             poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
     else:
+        # run analysis on the image
         statsDict, picts = analyzeImage(path, res, 
                                         method=method, MoDirt=MoDirt, 
                                         Mask=Mask)
@@ -84,6 +98,8 @@ def analyzeImgOrFolder (path, res, **kwargs):
         if genPoster:
             cv2.imwrite(posterFolder+name+'.png',
                         poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+                        
+    """Write the output to a CSV file"""
     filePath = os.path.join(outFolder,MoDirt.capitalize()+'_ouput_'+name+'.csv')
     CSV = gencsv.DataToCSV(filePath, name)   
     CSV.writeDataFromDict(Data,FirstColHead='Image')
@@ -97,6 +113,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
     """
     img = fun.loadImg(path)
     MoDirt = fun.checkMoDirt(MoDirt)
+    
     if Mask==0:
         mask = np.ones(img.shape)
     elif type(Mask)==np.ndarray and Mask.shape == img.shape:
@@ -106,6 +123,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
     retData = {}
     
     if MoDirt == 'mo':
+        # Method used by cleantests
         if method.lower() in ['cleantests','smallfoils', 'cleantest']:
             (PtArea, 
             FoilArea, 
@@ -115,7 +133,8 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
             
             PercPt = 100*PtArea/FoilArea
             poster = fun.makePoster(img)
-            
+        
+        # Metheod used by bigfoils
         elif method.lower() in ['bigfoils','big','bigscans','no border']:
             stats, picts = ImgAnalysis(img, mask, res, MoDirt=MoDirt,returnSizes=False)
             (PtArea,
@@ -132,6 +151,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
                     '% Exposed Pt':PercPt}
                     
     elif MoDirt == 'dirt':
+        # Method used by cleantests
         if method.lower() in ['cleantests','smallfoils', 'cleantest']:
             (DirtNum,
              DirtArea,
@@ -144,6 +164,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
             numOver100 = DirtSizes[DirtSizes>7850].size
             poster = fun.makePoster(img)
             
+        # Method used by bigfoils
         elif method.lower() in ['bigfoils','big','bigscans','no border']:
             stats, picts = ImgAnalysis(img, mask, res, MoDirt=MoDirt,returnSizes=True)
             (DirtNum,

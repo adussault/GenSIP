@@ -58,15 +58,24 @@ def analyzeDirt(sss, res):
                 beforeImg = cv2.imread(befpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
                 afterImg = cv2.imread(aftpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
                 # Compare the two images:
-                dirtVals, dirtPicts = dirtComp(beforeImg,afterImg, res)   
+                dirtVals, dirtPicts, dirtSizes = dirtComp(beforeImg, afterImg, 
+                                                          res, retSizeData=True)   
                 (numbf,
                  numaf,
                  areabf,
                  areaaf,
                  perDirtLoss) = dirtVals
+                 
                 (threshedbf, 
                  threshedaf) = dirtPicts
-                                                
+                 
+                (BefMean, 
+                 AftMean,
+                 BefMax, 
+                 AftMax,
+                 BefOver100, 
+                 AftOver100) = dirtSizes
+                                                            
                 # Create the output images
                 # Save the threshed images for analysis
                 cv2.imwrite('Output/Output_'+sss+'/DirtMaps/'+foilnum+' before_threshed.png',\
@@ -77,9 +86,16 @@ def analyzeDirt(sss, res):
         	# Write the output to the Data Dictionary
         	Data[foilnum] = {'Dirt Count Before':numbf, 
         	                 'Dirt Count After':numaf, 
-                                 'Dirt Area Before':areabf, 
-                                 'Dirt Area After':areaaf, 
-                                 'Approx Percent Dirt Loss by Area':perDirtLoss}
+                                 'Dirt Area Before (mm^2)':areabf, 
+                                 'Dirt Area After (mm^2)':areaaf, 
+                                 'Approx % Dirt Loss by Area':perDirtLoss,
+                                 'Mean Part. Area Before (micron^2)':BefMean,
+                                 'Mean Part. Area After (micron^2)':AftMean,
+                                 'Max Part. Area Before (micron^2)':BefMax,
+                                 'Max Part. Area After (micron^2)':AftMax,
+                                 'Approx % Parts. w/ >100micron diam. Before':BefOver100,
+                                 'Approx % Parts. w/ >100micron diam. After':AftOver100
+                                 }
                                  
             else: print "No after image for foil "+ foilnum
         else:
@@ -97,7 +113,13 @@ def analyzeDirt(sss, res):
                   'Dirt Count After', 
                   'Dirt Area Before (mm^2)', 
                   'Dirt Area After (mm^2)', 
-                  'Approx Percent Dirt Loss by Area']
+                  'Approx % Dirt Loss by Area',
+                  'Mean Part. Area Before (micron^2)',
+                  'Mean Part. Area After (micron^2)',
+                  'Max Part. Area Before (micron^2)',
+                  'Max Part. Area After (micron^2)',
+                  'Approx % Parts. w/ >100micron diam. Before',
+                  'Approx % Parts. w/ >100micron diam. After']
                   
     # Write the Data to the CSV file
     dirtCSV.writeDataFromDict(Data,FirstColHead='Foil #',colHeads=ColHeaders)
@@ -118,7 +140,7 @@ def analyzeDirt(sss, res):
 
 ####################################################################################
 			
-def dirtComp (beforeImg, afterImg, res, MaskEdges=True):
+def dirtComp (beforeImg, afterImg, res, MaskEdges=True, retSizeData=False):
     """
     This is the dirt compare foils function. It takes the before and after images and 
     returns the number of dirt particles and area of dirt on each foil, and 
@@ -141,6 +163,9 @@ def dirtComp (beforeImg, afterImg, res, MaskEdges=True):
                               MaskEdges=True, 
                               retSizes=True)
                               
+    BefMean, BefMax, BefPercOver100 = meas.getDirtSizeData(sizesBef, res)
+    AftMean, AftMax, AftPercOver100 = meas.getDirtSizeData(sizesAft, res)
+    
     # Calculate difference in area
     if areaBef!=0: # Prevents division by zero
         perDirtLoss = round(100*(areaBef-areaAft)/float(areaBef),1)
@@ -156,8 +181,18 @@ def dirtComp (beforeImg, afterImg, res, MaskEdges=True):
            
     picts = (threshedBef, 
              threshedAft)
-             
-    return ret, picts
+    
+    sizeData = (BefMean, 
+                AftMean,
+                BefMax, 
+                AftMax,
+                BefPercOver100, 
+                AftPercOver100)
+                
+    if retSizeData:
+        return ret, picts, sizeData
+    else:
+        return ret, picts
 
 ####################################################################################
 

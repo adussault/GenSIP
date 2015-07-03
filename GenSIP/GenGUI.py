@@ -424,7 +424,7 @@ def GUIfy(image):
             gauss=BLUR.get()
             thrshType=long(v.get())
             global threshed
-            threshed = fun.regionalThresh(image,poster,p,d,m,pt,gauss,thrshType,True)
+            threshed = fun.regionalThresh(image,poster,p,d,m,pt,gaussBlur=gauss,threshType=thrshType,MaskEdges=True)
             a.imshow(threshed,"gray")
             a.figure.canvas.draw()
         
