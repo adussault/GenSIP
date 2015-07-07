@@ -280,7 +280,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
 
 ################################################################################
 
-def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False):
+def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False,returnSizes=False):
     
     MoDirt = fun.checkMoDirt(MoDirt)
     threshed, poster = threshImage(img, Mask=mask,MoDirt=MoDirt)
@@ -319,7 +319,7 @@ def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False):
                   Perc])
                   
     if returnSizeData: stats.append(SizeData)
-       
+    if returnSizes: stats.append(sizes)
     threshed[threshed!=0]=255
 
     picts = (threshed, 

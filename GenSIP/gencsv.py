@@ -1,13 +1,18 @@
 """
-This module contains classes for handling all data writing and saving to csv
-file format.
+This module contains class that handles all data writing and saving to csv
+file format for GenSIP.
 """
 import csv
 import GenSIP.functions as fun
 import os
 from socket import gethostname
 
+###################################################################################
+
+###################################################################################
+
 class DataToCSV (object):
+    
     def __init__(self,filepath,title,mode='w+b'):
         """ Creates a CSV file. 
                 filepath - path of CSV file
@@ -30,10 +35,14 @@ class DataToCSV (object):
         TitleRow = self.makeTitle(title)
         self.writeHeader(TitleRow)
 
+    ###################################################################################
         
     def makeTitle(self, title):
-        """Makes the title row (first row) of the CSV file based off of the title 
-        vairable."""
+        """
+        Makes the title row (first row) of the CSV file based off of the title 
+        vairable.
+        Inputs: title string
+        """
         TitleRow = ["GenSIP Data",'','','']
         # Special Case for sample set strings for cleaning tests
         if self.isCleaningTest(): 
@@ -48,11 +57,20 @@ class DataToCSV (object):
             
         return TitleRow
         
+    ###################################################################################
+
     def isCleaningTest(self):
+        """
+        Checks to see if the particular test is a cleaning test, by looking to see 
+        if the title is all capitalized and ends with an F (as in BGF or BGNF
+        """
         ret = self.Title.isupper() and self.Title.endswith("F")
         return ret
-
+        
+    ###################################################################################
+    
     def writeHeader(self,TitleRow):
+        """writes the header to the csv file given the first title row"""
         # Second row is the date and time of the run and the computer on which 
         # this function was run:
         datestring = fun.getDateString()
@@ -63,7 +81,9 @@ class DataToCSV (object):
         InfoRow3 = ["Last Modification:", Version]
         self.dataWriter.writerows([TitleRow,InfoRow1,InfoRow2,InfoRow3,['']])
         self.AllRows.extend([TitleRow,InfoRow1,InfoRow2,InfoRow3,['']])
-        
+
+    ###################################################################################
+
     def writeDataFromDict(self, dataDict, **kwargs):
         """
         Takes a dictionary argument with the data from an analysis fuction and 
@@ -149,7 +169,10 @@ class DataToCSV (object):
             Rows.extend(FooterRows)
         self.dataWriter.writerows(Rows)
         self.AllRows.extend(Rows)
-            
+    
+    ###################################################################################
+    
     def closeCSVFile(self):
+        """Closes the CSV file"""
         self.CSVfile.close()
         

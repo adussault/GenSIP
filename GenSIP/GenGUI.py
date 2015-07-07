@@ -8,7 +8,6 @@ from GenSIP.kuwahara import Kuwahara
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import numpy as np
-#from GenSIP.loadTestImages import *
 
 
 def GUIfy(image):

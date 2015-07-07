@@ -1,17 +1,17 @@
-import cv2
 import numpy as np
 import GenSIP.functions as fun
 import GenSIP.bigscans.bigfoils as bf
 
-#from GenSIP.bigscans.bigfoils import bf.bigPostPreProc,bf.bigPosterfy, bf.bigRegionalThresh
 from matplotlib import pyplot as plt
 import os
 from socket import gethostname
 from time import time
 import pickle
 
-#Q1 = fun.loadImg("InputPicts/FoilScans/Q1/panorama.tif",0)
-    
+###################################################################################
+
+###################################################################################
+
 def threshPrec(panFolder,maskFolder, MoDirt="Mo",**kwargs):
     """
     This method is used to examine the error of analyzeMo and analyzeDirt
@@ -309,6 +309,9 @@ def threshPrec(panFolder,maskFolder, MoDirt="Mo",**kwargs):
     with open(outFolder+'/Plots/'+'Threshold_Data_'+MoDirt+str(Domain)+"_"+datestring,'wb') as f:
         pickle.dump(Data,f)
 
+###################################################################################
+
+###################################################################################
 
 def BIGanalyzeMoly(panSubs,panFolder,maskFolder, P=150,D=180,M=210,HE=253,Pt=240,I='',MoDirt='Mo',res=4):
     panSubs=os.listdir(panFolder)
@@ -356,7 +359,13 @@ def BIGanalyzeMoly(panSubs,panFolder,maskFolder, P=150,D=180,M=210,HE=253,Pt=240
     print "Point"+I
     return (totFoilArea,totPtArea,PercPt)
     
+###################################################################################
+
+###################################################################################
+
 def convTime(t):
     mins = round(t/60,0)
     seconds = round(t%60,3)
     print str(mins)+"mins "+str(seconds)+"secs"
+    
+#Q1 = fun.loadImg("InputPicts/FoilScans/Q1/panorama.tif",0)
