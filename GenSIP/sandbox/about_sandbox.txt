@@ -1,0 +1,3 @@
+Sandbox is a place for experimental and temporary files that are not yet ready to be accessed in ‘production.’
+If you are looking for the experimental Histogram analysis methods, they were moved to the histomethod package in the 
+Genesis home directory. The original versions of those files are found in: “GenSIP/old/old_sandbox”

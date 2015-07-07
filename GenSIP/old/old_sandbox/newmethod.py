@@ -222,7 +222,7 @@ def testonStandard (name, res, returnPoster=False, returnMask=False,verbose=True
 ###################################################################################
 
 ###################################################################################
-
+'''
 def anImgCalWrapper(img,res,returnPoster=False,Mask=0,verbose=True, MoDirt = 'Mo'):
     """
     Runs analazeImg and reformats the output for measure.compareToStandards
@@ -237,34 +237,102 @@ def anImgCalWrapper(img,res,returnPoster=False,Mask=0,verbose=True, MoDirt = 'Mo
         return tuple(ret)
     else:
         return tuple(ret[:-1])
+'''
 
 ###################################################################################
 
 ###################################################################################
 
-def analyzeImg(img,res,returnPoster=False,Mask=0,verbose=True):
+def analyzeByHisto(img,res,Mask=0,verbose=True,
+                MoDirt='mo',returnPoster=False,returnData=False,returnSizes=True):
     """
     Runs the newmethod analysis on an image. 
     
     """
-    
+    if MoDirt!='both':
+        MoDirt=fun.checkMoDirt(MoDirt)
+        
+    # Make the poster
     proc = PosterPreProc(img,Mask=Mask,ExcludePt=True)
     post = images.bigPosterfy(proc)
+    # Analyze the image with MakeRegions and New RegThresh
     Data = MakeRegions(img,post,Mask=Mask)
-    PtMap, DirtMap, Data = NewRegThresh(img,Data,Mask=Mask,\
-    returnData=True,verbose=verbose)
+    PtMap, DirtMap, Data = NewRegThresh(img,
+                                        Data,
+                                        Mask=Mask,
+                                        returnData=True,
+                                        verbose=verbose)
+                                        
+    # Make sure that the Dirt and Pt maps are binary images of 0 and 1
     DirtMap[DirtMap!=0]=1
     PtMap[PtMap!=0]=1
-    dirtArea, dirtNum = meas.calcDirt(DirtMap, res)
-    PtArea = meas.calcExposedPt(PtMap,res)
-    Data["dirtArea"] = dirtArea
-    Data["dirtNum"] = dirtNum
-    Data["PtArea"] = PtArea
-    if returnPoster:
-        return PtMap, DirtMap, Data, post
+    
+    # Extract the foil area from the Data dictionary
+    FoilArea = getFoilArea(Data)*res*10**-6
+    
+    # Calculate the Pt Area
+    PtArea = meas.calcExposedPt(PtMap,res, getAreaInSquaremm=True)
+    
+    # Calculate the Percent of area that is exposed Pt
+    if FoilArea == 0:
+        PercPt = 0
     else:
-        return PtMap, DirtMap, Data
+        PercPt = round((float(PtArea)/float(FoilArea))*100,2)
+        
+    # Calculate dirt area, number, sizes, and produce labelled image
+    dirtArea, dirtNum,dirtSizes,labeled = meas.calcDirt(DirtMap,
+                                                        res, 
+                                                        returnSizes=True,
+                                                        returnLabelled=True, 
+                                                        getAreaInSquaremm=True) 
+    if verbose:
+        print "dirt Area: " + str(dirtArea)   
+        print "dirt part number: " + str(dirtNum)
+        print "Sizes: " + str(dirtSizes)
+        
+    # Make the return tuples depending on the value of MoDirt and the return 
+    # options returnPoster, returnData, and returnSizes
+    if MoDirt=='mo':
+        stats = [PtArea, PercPt]
+        picts = [PtMap]
+        
+    elif MoDirt=='dirt':
+        stats = [dirtNum,dirtArea]
+        if returnSizes:
+            stats.append(dirtSizes)
+        picts = [DirtMap]
+        
+    elif MoDirt=='both':
+        stats = [PtArea, PercPt, dirtNum, dirtArea]
+        if returnSizes:
+            stats.append(dirtSizes)
+        picts = [PtMap, DirtMap]
+        
+    stats.append(FoilArea)
+    
+    if returnData:
+        stats.append(Data)
+        
+    if returnPoster:
+        picts.append(post)
+        
+    return tuple(stats), tuple(picts)
+    
+###################################################################################
 
+###################################################################################
+
+def getFoilArea (Data):
+    """ 
+    Returns the total foil area (in Pixels) of all of the regions of the 
+    data dictionary
+    """
+    areaSum = 0
+    for reg in Data:
+        areaSum += Data[reg]['RegMask'].sum()
+    return areaSum
+        
+        
 ###################################################################################
 
 ###################################################################################
@@ -285,7 +353,7 @@ def analyzeMoly(img,res,MoDirt='Mo',returnPoster=False,returnMask=False,Mask=0):
     else:
         mask = bigMaskEdges(IMG,res,Bkgrdthreshold=90)
     #print str(mask[0:20])
-    assert (mask.sum()!=0),"Everything is masked!"
+    if mask.sum()!=0: print "Everything is masked."
     assert (len(mask[mask==1]>len(mask[mask==0]))),"Mask is mostly black!"
     thresh,Data=NewRegThresh(IMG, poster, Mask=mask,gaussBlur=3,MoDirt=MoDirt,returnData=True)
     
@@ -345,12 +413,6 @@ def PosterPreProc(image,**kwargs):
         
     if type(Mask)==np.ndarray and Mask.shape==image.shape:
         img[Mask==0]=averageColor
-        # invMsk = np.bitwise_not(Mask)
-        # invMsk[invMsk!=0]=1
-        # Make the masked areas equal to the average of the image
-        # invMsk = int(np.average(image))*invMsk
-        #img = cv2.add(image,invMsk)
-        #img[img>np.max(image)] = int(np.average(image))
     
     proc = img.astype(np.uint8)
     proc = misc.imresize(proc,rsize)
