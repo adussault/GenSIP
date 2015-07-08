@@ -1,0 +1,11 @@
+platMax==255
+platMin==255
+MoMax==254
+MoMin==90
+DirtMax==93
+DirtMin==0
+# morphology steps with dirt:
+# type:open kernal_shape:circle kernal_radius:2
+CrackMax==‘Null’
+CrackMin==‘Null’
+

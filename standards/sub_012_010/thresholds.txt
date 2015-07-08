@@ -1,0 +1,15 @@
+platMax==255
+platMin==148
+MoMax==
+MoMin==
+DirtMax==68
+DirtMin==0
+# morphology on crack:
+# type:erode kernal_shape:circle kernal_radius:1
+# Used pencil tool to erase folds
+# morphology steps with dirt:
+# type:close kernal_shape:circle kernal_radius:1
+# type:open kernal_shape:circle kernal_radius:1
+CrackMax==‘Null’
+CrackMin==‘Null’
+

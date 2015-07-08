@@ -1,0 +1,12 @@
+platMax==255
+platMin==150
+MoMax==
+MoMin==
+DirtMax==
+DirtMin==0
+# morphology steps with dirt:
+# On_mask type:dilate kernal_shape: circle kernal_size:1
+# type:open kernal_shape:circle kernal_size:1
+# flood filled small crack next to main crack
+CrackMax==‘Null’
+CrackMin==‘Null’

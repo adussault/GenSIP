@@ -8,7 +8,7 @@ export_genSIP.py
 genSIPcanovenv/*
 genSIPvenv/*
 session6_2.py
-standards/*
 temp/*
+standards/sub_009_015/*
 test.csv
 update_version.py
