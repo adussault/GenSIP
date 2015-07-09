@@ -15,28 +15,55 @@ from GenSIP.histomethod.mainanalysis import analyzeByHisto
 
 ################################################################################
 
-def analyzeImgOrFolder (path, res, **kwargs):
+def animorf (path, res, method="cleantests", **kwargs):
     """
     Receives a path to an image or a folder of images and saves the output csv
     file and pictures to a folder 
     Example:
-        > analyzeImgOrFolder ("InputPicts/Folder/",16,MoDirt='mo',method='cleantests')
+        > animorf ("InputPicts/Folder/",16,MoDirt='mo',method='cleantests')
     Will run the cleantest 
-    
-        method=kwargs.get('method', "cleantests")
-    MoDirt=kwargs.get('MoDirt', 'Mo')
-    Mask=kwargs.get('Mask', 0)
-    genPoster=kwargs.get('genPoster', False)
-    compareToStds = kwargs.get('compToStds',False)
-    verbose = kwargs.get('verbose',False)
+    Kwargs:
+        - method =  "cleantests" - the method to use to analyze the image.
+                    Can be one of the following:
+                        cleantests - method used by cleantests.dirt and moly
+                        bigfoils - method used by bigscans.bigfoils
+                        histogram - new method developed that automatically assigns
+                            threshold values based on the histogram of the image.
+                            Currently animorf is the most refined means
+                            of using the histogram module. 
+                        standards - this method works by accessing the manually 
+                            thresholded images stored in standards/all_dirt/ and 
+                            standards/all_plat/ inside the current working 
+                            directory, and calculates the platinum or dirt data
+                            directly from those thresholded images. No matter what
+                            you assign the path variable, if method='standards', 
+                            then the function will work with the standard images. 
+        - MoDirt = 'Mo' - option to do molybdenum or dirt analysis
+        - Mask = 0 - option to include a path string to either a single mask (in 
+                    the case that the path variable links to a single image) or 
+                    a folder of masks with the same name as the image they corre-
+                    spond to. i.e. the image is "Images/sub_img_004_003.png" and the 
+                    mask is at "masks/sub_img_004_003.png"
+        - genPoster = False - Option to generate a folder of poster images in the
+                    the output folder.
+        - compToStds = False - Currently not used for anything. Would like to 
+                    turn this option into a means of directly comparing the 
+                    results of one method to the standard results
+        - autoMaskEdges = False - allows the bigfoil and histogram methods to work
+                    with individual foils like the cleantest method by automatically 
+                    masking off the dark background around the foil.If this option
+                    is set to True, then any input for the Mask variable is over
+                    -ridden.
+        - verbose = False - makes the function verbose.
 
     """
-    method=kwargs.get('method', "cleantests")
     MoDirt=kwargs.get('MoDirt', 'Mo')
     Mask=kwargs.get('Mask', 0)
     genPoster=kwargs.get('genPoster', False)
     compareToStds = kwargs.get('compToStds',False)
     verbose = kwargs.get('verbose',False)
+    autoMask = kwargs.get('autoMaskEdges',False)
+    stdDir = kwargs.get('stdDir', 'standards/')
     
     # Standardize MoDirt to 'mo' or 'dirt' using checkMoDirt
     MoDirt = fun.checkMoDirt(MoDirt)
@@ -57,7 +84,7 @@ def analyzeImgOrFolder (path, res, **kwargs):
         raise Exception("Invalid path name: %s" % path)
         
     # Generate output folders
-    outFolder = "Output/Output_"+name
+    outFolder = "Output/Output_"+name+'_'+method
     
     if genPoster: posterFolder = outFolder+'/PosterMaps/'
     
@@ -111,7 +138,8 @@ def analyzeImgOrFolder (path, res, **kwargs):
             # run analysis on the image
             statsDict, picts = analyzeImage(imgPaths[i], res, 
                                             method=method, MoDirt=MoDirt, 
-                                            Mask=mask)
+                                            Mask=mask,autoMaskEdges=autoMask,
+                                            stdDir=stdDir, verbose=verbose)
             imgName = os.path.splitext(images[i])[0]
             # Assign to Data Dictionary
             Data[imgName] = statsDict
@@ -133,7 +161,8 @@ def analyzeImgOrFolder (path, res, **kwargs):
         # run analysis on the image
         statsDict, picts = analyzeImage(path, res, 
                                         method=method, MoDirt=MoDirt, 
-                                        Mask=Mask)
+                                        Mask=Mask,autoMaskEdges=autoMask,
+                                        stdDir=stdDir, verbose=verbose)
         Data[name] = statsDict
         (threshed,
          poster) = picts
@@ -158,7 +187,8 @@ def analyzeImgOrFolder (path, res, **kwargs):
 
 ################################################################################
 
-def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=False):
+def analyzeImage(path, res, method='cleantests', MoDirt='mo', 
+                 Mask=0, autoMaskEdges=False, stdDir='standards/', verbose=False):
     """
     Given the path, runs analysis on a single image using one of the methods in
     GenSIP specified by the 'method' kwarg (currently: cleantests or bigfoils). 
@@ -173,6 +203,10 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
         mask = Mask.copy()
     else:
         raise Exception
+    # Uses my OLD maskEdges function to mask off the dark area around a foil if 
+    # specified. 
+    if autoMaskEdges:
+        maskedImg, mask = fun.maskEdge(img)
     retData = {}
     
     # MOLYBDENUM ANALYSIS ======================================================
@@ -217,7 +251,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
         elif method.lower() in ['standards','standard','std','stds']:
             poster = fun.posterfy(img)
             imgName = os.path.splitext(os.path.split(path)[1])[0]
-            PtMapPath = 'standards/all_plat/'+imgName+'.png'
+            PtMapPath = os.path.join(stdDir, 'all_plat/')+imgName+'.png'
             if os.path.exists(PtMapPath):
                 threshed = fun.loadImg(PtMapPath)
                 PtArea = meas.calcExposedPt(threshed, res, getAreaInSquaremm=True)
@@ -254,7 +288,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
     elif MoDirt == 'dirt':
         
         # Method used by cleantests  ––––––––––––––––––––––––––––––––––––
-        if method.lower() in ['cleantests','smallfoils', 'cleantest']:
+        if method.lower() in ['cleantests','smallfoils', 'cleantest','ct','foils']:
             (DirtNum,
              DirtArea,
              threshed,
@@ -292,7 +326,7 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, verbose=Fa
         elif method.lower() in ['standards','standard','std','stds']:
             poster = fun.posterfy(img)
             imgName = os.path.splitext(os.path.split(path)[1])[0]
-            DirtMapPath = 'standards/all_dirt/'+imgName+'.png'
+            DirtMapPath = os.path.join(stdDir, 'all_dirt/')+imgName+'.png'
             if os.path.exists(DirtMapPath):
                 threshed = fun.loadImg(DirtMapPath)
                 (DirtArea, 
@@ -366,8 +400,8 @@ def blankImg(dims=(100,100)):
 
 def compareToStandards(method, res, STDpath='standards/all_stds'):
     """Creates a csv file of the standard data"""
-        dirtFolder = os.path.join(path,'all_dirt')
-    platFolder = os.path.join(path,'all_plat')
+    dirtFolder = os.path.join(STDpath,'all_dirt')
+    platFolder = os.path.join(STDpath,'all_plat')
     dirtPaths = [os.path.join(dirtFolder,dm)
                  for dm in os.listdir(dirtFolder)
                  if dm.endswith('.png')]
@@ -402,9 +436,9 @@ if __name__=='__main__':
     for meth in methods:
         for m in masks:
             for md in modirt:
-                analyzeImgOrFolder(path, 16, method=meth,
-                                   MoDirt=md,Maks=m,
-                                   genPoster=True,verbose=True)
+                animorf(path, 16, method=meth,
+                        MoDirt=md,Maks=m,
+                        genPoster=True,verbose=True)
                 if type(m)==str:
                     M = 'withMasks'
                 else:
