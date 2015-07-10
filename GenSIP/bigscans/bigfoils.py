@@ -148,8 +148,8 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
         
         name, ext = os.path.splitext(sub)
         
-        subImage = fun.loadImg(panFolder+'/'+sub,0)
-        subMask = fun.loadImg(maskFolder+'/'+sub,0)
+        subImage = fun.loadImg(os.path.join(panFolder,sub),0)
+        subMask = fun.loadImg(os.path.join(maskFolder,sub),0)
         subMask = cv2.morphologyEx(subMask, cv2.MORPH_ERODE, np.ones((5,5)))
         
         # Create the threshholded image, poster, and the measurement data

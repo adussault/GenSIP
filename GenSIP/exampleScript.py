@@ -51,24 +51,24 @@ from GenSIP import nexus
 # Analyzing foils
 path = "InputPicts/TEST_Foils"
 res = 16
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='dirt',
                 Mask=0, 
                 method='cleantests')
                          
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='dirt',
                 Mask=0, 
                 method='bigfoils', 
                 autoMaskEdges=True)
                          
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='dirt',
                 Mask=0, 
                 method='histogram', 
                 autoMaskEdges=True)
                          
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='mo',
                 Mask=0,
                 method='cleantests')
@@ -78,26 +78,26 @@ path = "InputPicts/TEST_subImages"
 masks = "InputPicts/TEST_subImages_masks"
 
 # TEST WITHOUT MASK:
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='dirt',
                 Mask=0, 
                 method='histogram', 
                 autoMaskEdges=True)
 # This will be innacurate b/c of the automatic edge masking feature of cleantests
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                 MoDirt='dirt',
                 Mask=0, 
                 method='cleantests', 
                 autoMaskEdges=True)
 
 # TEST WITH MASK PROVIDED:
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
               MoDirt='dirt',
               Mask=masks, 
               method='histogram', 
               autoMaskEdges=True)
 # This will be innacurate b/c of the automatic edge masking feature of cleantests
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
               MoDirt='dirt',
               Mask=masks, 
               method='cleantests', 
@@ -113,7 +113,7 @@ path = "InputPicts/TEST_subImages/sub_010_001.tif"
 mask = "InputPicts/TEST_subImages_masks/sub_010_001.tif"
 res = 16
 
-nexus.animorf(path, res, 
+nexus.analyzImgOrFolder(path, res, 
                          MoDirt='dirt',
                          Mask=mask, 
                          method='histogram')

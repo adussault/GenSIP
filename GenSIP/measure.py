@@ -26,7 +26,11 @@ def calcExposedPt (Ptimage, res,**kwargs):
     # Make sure the image minimum is 0 and the image is binary (all pixel values
     # are equal to either the maximum value or 0)
     if Ptimage.min()!=0 or Ptimage[(Ptimage!=0)&(Ptimage!=Ptimage.max())].size!=0:
-        if not Ptimage.min()!=255: raise AllWhiteError("Image is all white.")
+    # Make sure the image is binary
+        if Ptimage.max() == Ptimage.min():
+            print "image is all white! Platinum area set to zero."
+            areaPt = 0
+            return areaPt
         else:
             raise Exception(
             """Image must be a binary image of 0 and a non-zero number.\n
@@ -82,9 +86,28 @@ def calcDirt(img, res, **kwargs):
     minPartArea = kwargs.get('minPartArea',0)
     
     # Make sure the image is binary
+    if img.max() == img.min():
+        print "image is all white! All dirt values set to zero."
+        areaDirt=0
+        numDirt=0
+        sizes = np.zeros((0,)).astype(np.uint32)
+        labeledFoil = np.zeros(img.shape)
+            # Generate return tuple:
+        ret = [areaDirt, numDirt]
+        if returnSizes:
+            ret.append(sizes)
+        if returnLabelled:
+            ret.append(labeledFoil)
+        return tuple(ret)
+        
     if img.min()!=0 or np.any(img[img!=img.min()]!=img.max()):
-        raise Exception("Image must be a binary image of 0 and a non-zero number.")
-
+        raise Exception(
+            """Image must be a binary image of 0 and a non-zero number.\n
+            Image Max: {0} \n
+            Image Min: {1} \n
+            Other values: {2}""".format(img.max(),img.min(),
+            img[(img!=img.min())&(img!=img.max())]))
+    
     #inv = cv2.bitwise_not(img)
     #invDirt = cv2.bitwise_not(isoDirt(img,profile))
     # Make a 3x3 matrix of ones as the structuring element so that any of the 8 nearest
@@ -129,9 +152,9 @@ def calcDirt(img, res, **kwargs):
 
 def getDirtSizeData(DirtSizes, res):
     if DirtSizes.size==0:
-        MeanSize = "'--"
-        MaxSize = "'--"
-        percAreaOver100 = "'--"
+        MeanSize = 0
+        MaxSize = 0
+        percAreaOver100 = 0
     else:
         DirtSizes = DirtSizes*res
         MeanSize = round(DirtSizes.mean(),1)

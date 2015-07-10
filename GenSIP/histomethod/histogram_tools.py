@@ -8,7 +8,7 @@ import numpy as np
 import GenSIP.histomethod.datatools as dat
 
 
-def selectDirtThresh(sectData):
+def selectDirtThresh(sectData, verbose=True):
     Histogram = sectData['Histogram']
     MoPeak = sectData['MoPeak']
     Pot_Infl = sectData['PosInfl'][sectData['PosInfl']<MoPeak]
@@ -20,7 +20,7 @@ def selectDirtThresh(sectData):
     if (Pot_Infl.size!=0) and (Histogram[Pot_Infl.max()] >= Histogram[MoPeak]/25):
         Dirt_Thresh = Pot_Infl.max()
     else:
-        print "MoPeak: "+str(MoPeak)
+        if verbose: print "MoPeak: "+str(MoPeak)
         Pot_Dirt = np.arange(0,MoPeak,1)
         Pot_Dirt = Pot_Dirt[Histogram[Pot_Dirt]<=Histogram[MoPeak]/20]
         for i in range(1,21):
@@ -28,14 +28,14 @@ def selectDirtThresh(sectData):
                 Dirt_Thresh = Pot_Dirt.max()
                 break
         else:
-            print "Dirt thresh set to zero."
+            if verbose: print "Dirt thresh set to zero."
             Dirt_Thresh = 0
     #while n == 0:
     #    if Potential_Infl.max():
     #        pass
     return Dirt_Thresh
     
-def selectPtThresh(sectData):
+def selectPtThresh(sectData, verbose=True):
     """
     Takes the data dictionary of a specific region and uses the Histogram to determine
     the optimum threshold value for the platinum. 
@@ -47,30 +47,42 @@ def selectPtThresh(sectData):
     PtVals = sectData['Valleys'][sectData['Valleys']>sectData['MoPeak']] 
     # All negative Inflection points with higher grayscale vals than MoPeak
     PtInfls = sectData['NegInfl'][sectData['NegInfl']>sectData['MoPeak']] 
-        
+    
+    if verbose: print "MoPeak: "+str(sectData['MoPeak'])
+    
     if PtPeaks.size!=0:
         # Filter out any peaks that may be close to the MoPeak
         PtPeaks = PtPeaks[sectData['Histogram'][PtPeaks]<0.9*sectData['Histogram'][sectData['MoPeak']]]
     if PtPeaks.size!=0:
+        if verbose: print "Potential Pt peaks found."
         PtPeak = PtPeaks[sectData['Histogram'][PtPeaks].argmax()]
         PtVals = PtVals[PtVals<PtPeak] # Remove any 
         if PtVals.size != 0:
             PtThresh = np.max(PtVals)
+            if verbose: print "Pt Threshold value set to a valley between the Molybdenum peak and Pt peak."
         else:
             PtThresh = PtPeak
+            if verbose: print "Pt Threshold value set to the Platinum peak."
     else:
+        if verbose: print "No potential Pt peaks."
         if PtInfls.size != 0:
             PtThresh = np.median(PtInfls)
+            if verbose: 
+                print "Pt Threshold value set to the median inflection point between the MoPeak and PtPeak."
         elif PtVals.size != 0:
             PtThresh = np.max(PtVals)
             # The smoothing algorithms actually move the location of the valley
             # Find the actually valley by looking for the minimum in the Histogram
             # near the PtThresh in the smoothed Histogram.
             PtThresh = sectData['Histogram'][PtThresh-4:PtThresh+5].argmin()+PtThresh-4
+            if verbose: print "Pt Threshold set to Valley between MoPeak and the max value."
         else:
             PtThresh = int(sectData['Max'])
+            if verbose: print "Pt Threshold set to maximum pixel value in the image."
     if PtThresh<100:
+        if verbose: print "Pt Thresh set to 100 to prevent it from being set too low."
         PtThresh = 100
+    if verbose: print "Pt Thresh: " + str(PtThresh)
     return int(PtThresh)
     
 def IDPeaks(img):

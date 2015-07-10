@@ -44,7 +44,7 @@ def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
         
         try: masks[masks.index(sub)] = maskPath+sub
         except: 
-            print sub, maskPath
+            print str(sub), str(maskPath)
             return
             
     outFolders = ["Output/"+name,
@@ -56,19 +56,26 @@ def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
         outFolders=outFolders[:-1]
     for f in outFolders:
         if not(os.path.exists(f)):
-            os.mkdir(f)
+            os.makedirs(f)
     # initiate results dictionary.
     Results = {}
     for i in range(len(subNames)):
-        if verbose: print subNames[i]
+        if verbose: print str(subNames[i])
         img = fun.loadImg(subImgs[i])
         mask = fun.loadImg(masks[i])
         if genPoster:
-            PtMap, DirtMap, Data, post = analyzeImg(img,res,returnPoster=True,Mask=mask,verbose=verbose)
+            PtMap, DirtMap, Data, post = analyzeByHisto(img,res,
+                                                        returnPoster=True,
+                                                        Mask=mask,
+                                                        verbose=verbose)
             cv2.imwrite("Output/"+name+"/PosterMaps/"+subNames[i]+".png",
                         post, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
         else:
-            PtMap, DirtMap, Data = analyzeImg(img,res,returnPoster=False,Mask=mask,verbose=verbose)
+            PtMap, DirtMap, Data = analyzeByHisto(img,res,
+                                                  returnPoster=False,
+                                                  Mask=mask,
+                                                  verbose=verbose)
+                                                  
         # Remove the results from the Data dictionary and put them in the results
         # Dictionary. If the Data dictionary somehow does not have one of the results,
         # that entry in the Results dictionary is set to "ERROR".
@@ -104,15 +111,26 @@ def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
 
 ###################################################################################
 
-def analyzeByHisto(img,res,Mask=0,verbose=True,
-                MoDirt='mo',returnPoster=False,returnData=False,returnSizes=True):
+def analyzeByHisto(img,res,
+                   Mask=0,           verbose=True,
+                   MoDirt='mo',      returnPoster=False,
+                   returnData=False, returnSizes=True):
     """
     Runs the newmethod analysis on an image. 
     
     """
     if MoDirt!='both':
         MoDirt=fun.checkMoDirt(MoDirt)
-        
+    
+    (PtMap,
+     DirtMap,
+     post,
+     Data) = generateMapsAndData (img, 
+                                  Mask=Mask,
+                                  verbose=verbose, 
+                                  genPoster=True, 
+                                  genProc=False)
+    '''
     # Make the poster
     proc = PosterPreProc(img,Mask=Mask,ExcludePt=True)
     post = images.bigPosterfy(proc)
@@ -123,7 +141,7 @@ def analyzeByHisto(img,res,Mask=0,verbose=True,
                                         Mask=Mask,
                                         returnData=True,
                                         verbose=verbose)
-                                        
+                                        '''                               
     # Make sure that the Dirt and Pt maps are binary images of 0 and 1
     DirtMap[DirtMap!=0]=1
     PtMap[PtMap!=0]=1
@@ -183,6 +201,28 @@ def analyzeByHisto(img,res,Mask=0,verbose=True,
 
 ###################################################################################
 
+def generateMapsAndData (img, Mask=0,verbose=False, genPoster=False, genProc=False):
+    """Receives an image and optionally a Mask and returns the PtMap, DirtMap,
+    Data dictionary and optionally the poster and preprocessed image from NewRegThresh"""
+    # Make the poster
+    proc = PosterPreProc(img,Mask=Mask,ExcludePt=True)
+    post = images.bigPosterfy(proc)
+    # Analyze the image with MakeRegions and NewRegThresh
+    Data = MakeRegions(img,post,Mask=Mask)
+    PtMap, DirtMap, Data = NewRegThresh(img,
+                                        Data,
+                                        Mask=Mask,
+                                        returnData=True,
+                                        verbose=verbose)
+    ret = [PtMap, DirtMap]
+    if genPoster:
+        ret.append(post)
+    if genProc:
+        ret.append(proc)
+    ret.append(Data)
+    return tuple(ret)
+                    
+
 def getFoilArea (Data):
     """ 
     Returns the total foil area (in Pixels) of all of the regions of the 
@@ -229,9 +269,15 @@ def PosterPreProc(image,**kwargs):
         if Mask.all() == 0:
             averageColor = 0
         else:
-            averageColor = int(np.average(img[(Mask!=0)&(img>=10)&(img<=245)]))
+            try: 
+                averageColor = int(np.average(img[(Mask!=0)&(img>=10)&(img<=245)]))
+            except ValueError:
+                averageColor = int(np.average(img[(Mask!=0)]))
     else:
-        averageColor = int(np.average(img[(img>=10)&(img<=245)]))
+        try: 
+            averageColor = int(np.average(img[(img>=10)&(img<=245)]))
+        except ValueError:
+            averageColor = int(np.average(img))
         
     if ExcludeDirt:
         img[img<=40]=averageColor
@@ -265,7 +311,7 @@ def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose
 
     # Clean up data dictionary. Maxreg is the region with the largest area
     Data = cleanUpRegData(Data) 
-    Data,Maxreg = findMaxReg(Data)
+    Data,Maxreg = findMaxReg(Data, verbose=verbose)
        
 
     # Initiate the platinum, Area, Molybdenum, and Dirt Sums for each region.
@@ -279,29 +325,41 @@ def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose
     DirtMap = np.zeros(ogimage.shape).astype(np.uint8)
     
     for reg in Data:
+        if verbose: print "Region: "+str(reg)
         #  Set Threshold value for Pt
         numPx = sum(Data[reg]['Histogram'])
         # If the region is too small, then use the Pt threshold level of the largest
         # region
         if numPx<2000:
-            PtThresh = hist.selectPtThresh(Data[Maxreg])
-            DirtThresh = hist.selectDirtThresh(Data[Maxreg])
+            if verbose: print "Selecting Dirt threshold value..."
+            PtThresh = hist.selectPtThresh(Data[Maxreg], verbose=verbose)
+            if verbose: print "Selecting Platinum threshold value..."
+            DirtThresh = hist.selectDirtThresh(Data[Maxreg], verbose=verbose)
             Data[reg]['PtThresh'] = PtThresh
             Data[reg]['DirtThresh'] = DirtThresh
         else:
-            PtThresh = hist.selectPtThresh(Data[reg])
-            DirtThresh = hist.selectDirtThresh(Data[reg])
+            PtThresh = hist.selectPtThresh(Data[reg],verbose=verbose)
+            DirtThresh = hist.selectDirtThresh(Data[reg],verbose=verbose)
             Data[reg]['PtThresh'] = PtThresh
             Data[reg]['DirtThresh'] = DirtThresh
+            
         # Make the PtMap using the applyPtThresh function.
-        Data[reg]['PtMap'] = applyPtThresh(ogimage,PtThresh,\
-        regionMask=Data[reg]['RegMask'],Mask=Mask).astype(np.bool_)
+        Data[reg]['PtMap'] = applyPtThresh(ogimage,
+                                           PtThresh,
+                                           regionMask=Data[reg]['RegMask'],
+                                           Mask=Mask).astype(np.bool_)
+                                           
         # Make the DirtMap using the applyDirtThresh function.
-        Data[reg]['DirtMap'] = applyDirtThresh(ogimage,DirtThresh,\
-        regionMask=Data[reg]['RegMask'],Mask=Mask).astype(np.bool_)
-        Data[reg]['MolyMap']=getMolyMap(Data[reg]['DirtMap'],Data[reg]['PtMap'],\
-        regionMask=Data[reg]['RegMask'],Mask=Mask).astype(np.bool_)
-        # Combine to 
+        Data[reg]['DirtMap'] = applyDirtThresh(ogimage,
+                                               DirtThresh,
+                                               regionMask=Data[reg]['RegMask'],
+                                               Mask=Mask).astype(np.bool_)
+                                               
+        Data[reg]['MolyMap']=getMolyMap(Data[reg]['DirtMap'],
+                                        Data[reg]['PtMap'],
+                                        regionMask=Data[reg]['RegMask'],
+                                        Mask=Mask).astype(np.bool_)
+        # Combine to overall maps
         PtMap += Data[reg]['PtMap']
         DirtMap += Data[reg]['DirtMap']
         Ptsum += meas.calcExposedPt(Data[reg]['PtMap'],1)
@@ -358,7 +416,7 @@ def cleanUpRegData(Data):
 
     return Data
     
-def findMaxReg(Data):
+def findMaxReg(Data, verbose=False):
     "Finds the largest region in an image using its Data Dictionary."
     largest = 0
     Maxreg = ''
@@ -368,12 +426,12 @@ def findMaxReg(Data):
             largest = numPx
             Maxreg = reg     
     if Maxreg=='':
-        print "No Max region found. Set to 'Mo'."
-        print largest
-        print 'Keys'+str(Data.keys())
+        if verbose: print "No Max region found. Set to 'Mo'."
+        if verbose: print largest
+        if verbose: print 'Keys'+str(Data.keys())
         if 'Mo' in Data.keys(): Maxreg = 'Mo'
         else: 
-            print "'Mo' not in Data dictionary. Set to first key in Data dictionary."
+            if verbose: print "'Mo' not in Data dictionary. Set to first key in Data dictionary."
             Keys = Data.keys()
             Keys.sort()
             Maxreg = Keys[0]
