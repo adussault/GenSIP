@@ -1,0 +1,528 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.bigscans package &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="index.html" />
+    <link rel="up" title="GenSIP package" href="GenSIP.html" />
+    <link rel="next" title="GenSIP.cleantests package" href="GenSIP.cleantests.html" />
+    <link rel="prev" title="GenSIP package" href="GenSIP.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gensip-bigscans-package">
+<h1>GenSIP.bigscans package<a class="headerlink" href="#gensip-bigscans-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-GenSIP.bigscans.bigcalibrate">
+<span id="gensip-bigscans-bigcalibrate-module"></span><h2>GenSIP.bigscans.bigcalibrate module<a class="headerlink" href="#module-GenSIP.bigscans.bigcalibrate" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="GenSIP.bigscans.bigcalibrate.BIGanalyzeMoly">
+<code class="descclassname">GenSIP.bigscans.bigcalibrate.</code><code class="descname">BIGanalyzeMoly</code><span class="sig-paren">(</span><em>panSubs</em>, <em>panFolder</em>, <em>maskFolder</em>, <em>P=150</em>, <em>D=180</em>, <em>M=210</em>, <em>HE=253</em>, <em>Pt=240</em>, <em>I=''</em>, <em>MoDirt='Mo'</em>, <em>res=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigcalibrate.html#BIGanalyzeMoly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigcalibrate.BIGanalyzeMoly" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigcalibrate.convTime">
+<code class="descclassname">GenSIP.bigscans.bigcalibrate.</code><code class="descname">convTime</code><span class="sig-paren">(</span><em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigcalibrate.html#convTime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigcalibrate.convTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigcalibrate.threshPrec">
+<code class="descclassname">GenSIP.bigscans.bigcalibrate.</code><code class="descname">threshPrec</code><span class="sig-paren">(</span><em>panFolder</em>, <em>maskFolder</em>, <em>MoDirt='Mo'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigcalibrate.html#threshPrec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigcalibrate.threshPrec" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method is used to examine the error of analyzeMo and analyzeDirt
+due to variations in the threshold level. It produces a series of graphs 
+depicting the variation of the calculated molybdenum loss or dirt loss with 
+the threshold levels in the regionalThresh.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last">
+<li><p class="first">sss: The Sample Set String of input pictures to examine, just as in</p>
+</li>
+<li><dl class="first docutils">
+<dt>Domain: An integer that gives the length of the threshold domain </dt>
+<dd><p class="first last">over which to plot the output values. (Sorry that is terribly 
+explained. Its the length of the x-axis in the output plot.)</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">step: Step length over the Domain. Default set to 2</p>
+</li>
+<li><dl class="first docutils">
+<dt>MoDirt: string variable designating whether to examine analyseMo or</dt>
+<dd><dl class="first last docutils">
+<dt>analyzeDirt. Allowable values are:</dt>
+<dd><ul class="first last simple">
+<li>Moly Analysis: &#8220;Mo&#8221;,&#8221;Moly&#8221;,&#8221;moly&#8221;,&#8221;molybdenum&#8221;,&#8221;Molybdenum&#8221;,&#8221;M&#8221;,&#8221;m&#8221;</li>
+<li>Dirt Analysis: &#8220;Dirt&#8221;,&#8221;dirt&#8221;,&#8221;D&#8221;,&#8221;d&#8221;</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>RUN: a tuple describing which regions you want to vary the threshold</dt>
+<dd><p class="first last">value over. Regions that are not in the RUN tuple will be kept 
+constant at their start value (below).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Pstart, Dstart, Mstart, Ptstart: The values at which to start the </dt>
+<dd><p class="first last">threshold domain.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="docutils">
+<dt>For Mo analysis:</dt>
+<dd>Pstart=90,Dstart=120,Mstart=180,Ptstart=180</dd>
+<dt>For dirt analysis:</dt>
+<dd>Pstart=8,Dstart=28,Mstart=55,Ptstart=60</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.bigscans.bigfoils">
+<span id="gensip-bigscans-bigfoils-module"></span><h2>GenSIP.bigscans.bigfoils module<a class="headerlink" href="#module-GenSIP.bigscans.bigfoils" title="Permalink to this headline">¶</a></h2>
+<p>This is the main module for analyzing the SEM scans of the large foils. It 
+contains a function analyzePano that takes a large panorama image (&gt;100Mb type 
+images) and its corresponding mask image (of the same dimensions) and divides 
+them up into 256 sub images, and then hands off analysis of those subimages to 
+the function analyzeSubImages. 
+Once the panorama image is divided up, you can call analyzeSubImages directly 
+using the filepaths to the folder of subimages and mask subimages.</p>
+<dl class="function">
+<dt id="GenSIP.bigscans.bigfoils.ImgAnalysis">
+<code class="descclassname">GenSIP.bigscans.bigfoils.</code><code class="descname">ImgAnalysis</code><span class="sig-paren">(</span><em>img</em>, <em>mask</em>, <em>res</em>, <em>MoDirt='mo'</em>, <em>returnSizeData=False</em>, <em>returnSizes=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigfoils.html#ImgAnalysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigfoils.ImgAnalysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs analysis on a single image given the image, the mask, and the resolution.
+Inputs:</p>
+<blockquote>
+<div><ul class="simple">
+<li>img - image as a numpy.ndarray</li>
+<li>mask - mask of the image, must have the same dimensions as img</li>
+<li>res - resolution of the image in square microns/pixel</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last">
+<li><p class="first">MoDirt - option to perform molybdenum or dirt analysis on the image</p>
+</li>
+<li><dl class="first docutils">
+<dt>MaskEdges = True - option to automatically mask off the background if </dt>
+<dd><p class="first last">set to True</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">retSizeData = False - option to return the dirt size data if set to True</p>
+</li>
+<li><p class="first">retSizes = False - option to return the raw dirt sizes in pixel area if set to True</p>
+</li>
+<li><p class="first">verbose = False - prints verbose output if set to True.</p>
+</li>
+</ul>
+</dd>
+<dt>Returns 2 tuples (or 3 if retSizeData = True):</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>stats - numerical molybdenum or dirt data:</dt>
+<dd><ul class="first simple">
+<li>numDirt - number of dirt particles</li>
+<li>Area</li>
+<li>AreaDirt - total area of dirt particles in square microns</li>
+<li>Perc - percentage of foil covered in dirt</li>
+</ul>
+<p>&lt;optional if retSizeData=True&gt;:
+- MeanSize - Mean dirt particle area in square microns
+- MaxSize - Max dirt particle area in square microns
+- percAreaOver100 - Percent of particles with an approximate diameter</p>
+<blockquote>
+<div><p>greater than 100 microns</p>
+</div></blockquote>
+<p>&lt;optional if retSizes=True&gt;:
+- sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)</p>
+<blockquote class="last">
+<div><p>of each dirt particle in pixels</p>
+</div></blockquote>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>picts - the thresholded dirt or platinum images and poster</dt>
+<dd><ul class="first last simple">
+<li>threshed</li>
+<li>poster</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigfoils.analyzePano">
+<code class="descclassname">GenSIP.bigscans.bigfoils.</code><code class="descname">analyzePano</code><span class="sig-paren">(</span><em>panPath</em>, <em>maskPath</em>, <em>res</em>, <em>foilname</em>, <em>Quarter=''</em>, <em>MoDirt='Mo'</em>, <em>genPoster=False</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigfoils.html#analyzePano"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigfoils.analyzePano" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function runs full analysis on a single panorama SEM scan of a foil. 
+Essentially all this does is split up the panorama and mask images, puts 
+the resulting subimages into folders, and then calls &#8216;analyzeSubImages&#8217; on 
+the folders of sub-images.</p>
+<dl class="docutils">
+<dt>The inputs are:</dt>
+<dd><p class="first">Arguments:</p>
+<ul>
+<li><p class="first">panPath - the path string to the panorama image of the foil</p>
+</li>
+<li><dl class="first docutils">
+<dt>maskPath - the path string to the panorama of a binary image denoting </dt>
+<dd><p class="first last">areas to keep masked off from analysis. Currently the working proce
+-dure is for someone to manually mask off the edges and all cracks of
+the SEM scan in photoshop, and then save this mask panorama as a .png 
+or .tiff file. Hopefully in the future a more automated crack-and-
+-edge-finding algorithm can be developed.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">res - Resolution of the image, in square microns per pixel.</p>
+</li>
+<li><dl class="first docutils">
+<dt>foilname - The name/serial number of the foil being analyzed, for </dt>
+<dd><p class="first last">example: &#8220;40360,2&#8221;.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Key-word Arguments:</p>
+<ul class="last">
+<li><dl class="first docutils">
+<dt>Quarter - The section of the foil being analyzed, i.e. &#8220;Q1&#8221;. </dt>
+<dd><p class="first last">Default is set to an empty string.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>MoDirt - string designating whether to run dirt analysis or molybdenum</dt>
+<dd><dl class="first last docutils">
+<dt>analysis. Allowable inputs:</dt>
+<dd><p class="first last">&#8220;Mo&#8221;,&#8221;Moly&#8221;,&#8221;moly&#8221;,&#8221;molybdenum&#8221;,&#8221;Molybdenum&#8221;,&#8221;M&#8221;,&#8221;m&#8221;
+or for dirt analysis: &#8220;Dirt&#8221;,&#8221;dirt&#8221;,&#8221;D&#8221;,&#8221;d&#8221;</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>genPoster - option if the user wants to generate and save poster images</dt>
+<dd><p class="first last">in order to see how the image is split up into regions.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigfoils.analyzeSubImages">
+<code class="descclassname">GenSIP.bigscans.bigfoils.</code><code class="descname">analyzeSubImages</code><span class="sig-paren">(</span><em>panFolder</em>, <em>maskFolder</em>, <em>res</em>, <em>foilname</em>, <em>Quarter=''</em>, <em>MoDirt='Mo'</em>, <em>genPoster=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigfoils.html#analyzeSubImages"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigfoils.analyzeSubImages" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function runs the analysis on all of the subimages of the panorama. It 
+writes the output to a csv file and produces images of the dirt and exposed 
+platinum on the foil.</p>
+<blockquote>
+<div><p>Arguments:
+- panFolder - Path string to the folder containing all of the sub-</p>
+<blockquote>
+<div>images of the panorama.</div></blockquote>
+<ul>
+<li><dl class="first docutils">
+<dt>maskFolder - Path string to the folder containing all of the sub-</dt>
+<dd><p class="first last">images of the mask.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">res - Resolution of the image, in square microns per pixel.</p>
+</li>
+<li><dl class="first docutils">
+<dt>foilname - The name/serial number of the foil being analyzed, for </dt>
+<dd><p class="first last">example: &#8220;40360,2&#8221;.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Key-word Arguments:</p>
+<ul>
+<li><dl class="first docutils">
+<dt>Quarter - The section of the foil being analyzed, i.e. &#8220;Q1&#8221;. </dt>
+<dd><p class="first last">Default is set to an empty string.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>MoDirt - string designating whether to run dirt analysis or molybdenum</dt>
+<dd><dl class="first last docutils">
+<dt>analysis. Allowable inputs:</dt>
+<dd><p class="first last">&#8220;Mo&#8221;,&#8221;Moly&#8221;,&#8221;moly&#8221;,&#8221;molybdenum&#8221;,&#8221;Molybdenum&#8221;,&#8221;M&#8221;,&#8221;m&#8221;
+or for dirt analysis: &#8220;Dirt&#8221;,&#8221;dirt&#8221;,&#8221;D&#8221;,&#8221;d&#8221;</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>genPoster - option if the user wants to generate and save poster images</dt>
+<dd><p class="first last">in order to see how the image is split up into regions.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigfoils.bigRegionalThresh">
+<code class="descclassname">GenSIP.bigscans.bigfoils.</code><code class="descname">bigRegionalThresh</code><span class="sig-paren">(</span><em>ogimage</em>, <em>poster</em>, <em>p=8</em>, <em>d=28</em>, <em>m=55</em>, <em>hE=60</em>, <em>pt=70</em>, <em>gaussBlur=3</em>, <em>threshType=0L</em>, <em>Mask=0</em>, <em>GetMask=0</em>, <em>MoDirt='Mo'</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigfoils.html#bigRegionalThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigfoils.bigRegionalThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the main thresholding method for analyzing the amount of Pt and dirt
+on the foils. It takes the posterized image and splits the image into regions 
+based on the gray level in these different regions, then it assigns different
+threshold parameters to the different regions, specified by the arguments p,
+d,m, and pt, which correspond to the regions &#8216;pleat&#8217;,&#8217;dark Molybdenum&#8217;, 
+&#8216;Molybdenum,&#8217; and &#8216;platinum.&#8217; For the large scans, an additional region 
+called &#8220;highEx&#8221; or high exposure, was created above Pt.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.bigfoils.threshImage">
+<code class="descclassname">GenSIP.bigscans.bigfoils.</code><code class="descname">threshImage</code><span class="sig-paren">(</span><em>img</em>, <em>Mask=False</em>, <em>MoDirt='mo'</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/bigfoils.html#threshImage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.bigfoils.threshImage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an image and optional mask and MoDirt option and preprocesses the image
+and performs regionalThresh on it, and returns the thresholded image and the 
+poster.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.bigscans.images">
+<span id="gensip-bigscans-images-module"></span><h2>GenSIP.bigscans.images module<a class="headerlink" href="#module-GenSIP.bigscans.images" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the functions used to deal with a large panorama image such 
+as those used in analyzing the big foil scans.</p>
+<dl class="function">
+<dt id="GenSIP.bigscans.images.bigPostPreProc">
+<code class="descclassname">GenSIP.bigscans.images.</code><code class="descname">bigPostPreProc</code><span class="sig-paren">(</span><em>image</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/images.html#bigPostPreProc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.images.bigPostPreProc" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method takes the image of the foil and creates a smoothed Kuwahara image
+used to make the poster for regional thresholding.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last simple">
+<li>image - the image to perform preprocessing on.</li>
+</ul>
+</dd>
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last simple">
+<li>Mask = 0 - Assign the Mask here</li>
+<li>KuSize = 17 - Size of Kuwahara Filter</li>
+<li>Gaus1 = 3 - Size of first Gaussian Blur</li>
+<li>Gaus2 = 11 - Size of second Gaussian Blur</li>
+<li>rsize = .1 - Resize value</li>
+<li>Kuw_only = False - Option to only return the Kuwahara filtered image</li>
+<li>ExcludeDirt = True - Option to Exclude dirt</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.images.bigPosterfy">
+<code class="descclassname">GenSIP.bigscans.images.</code><code class="descname">bigPosterfy</code><span class="sig-paren">(</span><em>image</em>, <em>k_size=6</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/images.html#bigPosterfy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.images.bigPosterfy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a gray image and sets all values within a given range to a single value
+this way we can divide up regions into high Exposure areas, primarily Pt, 
+primarily Mo, dirt, or black. The only difference between bigPosterfy and 
+posterfy found in GenSIP.functions is the additional &#8216;highEx&#8217; region. This
+is added because the large foils have more fluctuation in topography, and 
+hence various levels of contrast and exposure.</p>
+<dl class="docutils">
+<dt>Kwargs:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>k_size - size of the kernal used in the final morphological opening</dt>
+<dd><p class="first last">step.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.images.makeManyPosters">
+<code class="descclassname">GenSIP.bigscans.images.</code><code class="descname">makeManyPosters</code><span class="sig-paren">(</span><em>foldername</em>, <em>foilname='40360_2'</em>, <em>Quarter='Q1'</em>, <em>Mask=0</em>, <em>kern=6</em>, <em>KuSize=9</em>, <em>Gaus1=3</em>, <em>Gaus2=11</em>, <em>rsize=0.1</em>, <em>Kuw_only=False</em>, <em>ExcludeDirt=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/images.html#makeManyPosters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.images.makeManyPosters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs BIGmakeposter on a set of images in a folder and saves them to a new 
+poster folder.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.images.splitImage">
+<code class="descclassname">GenSIP.bigscans.images.</code><code class="descname">splitImage</code><span class="sig-paren">(</span><em>image</em>, <em>numParts</em>, <em>path='InputPicts/FoilScans/Q1'</em>, <em>name=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/images.html#splitImage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.images.splitImage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an image and divides it up into a number of sub-images specified by 
+numParts. writes the output to a folder in the path folder and names it 
+&#8220;<a href="#id1"><span class="problematic" id="id2">sub_imgs_</span></a>&#8220;+name.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last">
+<li><p class="first">image - the image to be divided</p>
+</li>
+<li><dl class="first docutils">
+<dt>numParts - the number of sub-Images to be produced. Must be a perfect</dt>
+<dd><p class="first last">square.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last simple">
+<li>path - path to the folder to contain the subimages folder</li>
+<li>name - name of the images produced</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.bigscans.images.stitchImage">
+<code class="descclassname">GenSIP.bigscans.images.</code><code class="descname">stitchImage</code><span class="sig-paren">(</span><em>folderpath</em>, <em>imgType='.png'</em>, <em>color=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/bigscans/images.html#stitchImage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.bigscans.images.stitchImage" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method takes a folder of sub-images and stitches them back together and
+writes the resulting image to a large montage image named &#8220;montage.png&#8221; in 
+the given folder.</p>
+<dl class="docutils">
+<dt>Input Arguments:</dt>
+<dd><ul class="first last simple">
+<li>folderpath - path to the folder containing the sub-images</li>
+</ul>
+</dd>
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last simple">
+<li>imgType - type of image file contained in subfolder (i.e. .jpeg, .png,
+.tif, etc.) it is important to include the &#8216;.&#8217; at the beginning. Default
+set to &#8221;.png&#8221;.</li>
+<li>color - specifies whether the images are to be loaded in color or 
+grayscale.</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.bigscans">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-GenSIP.bigscans" title="Permalink to this headline">¶</a></h2>
+<p>The bigscans package is for Big Scans.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GenSIP.bigscans package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-GenSIP.bigscans.bigcalibrate">GenSIP.bigscans.bigcalibrate module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.bigscans.bigfoils">GenSIP.bigscans.bigfoils module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.bigscans.images">GenSIP.bigscans.images module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.bigscans">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="GenSIP.html">GenSIP package</a><ul>
+      <li>Previous: <a href="GenSIP.html" title="previous chapter">GenSIP package</a></li>
+      <li>Next: <a href="GenSIP.cleantests.html" title="next chapter">GenSIP.cleantests package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GenSIP.bigscans.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/GenSIP.bigscans.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

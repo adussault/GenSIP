@@ -1,0 +1,341 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.cleantests package &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="index.html" />
+    <link rel="up" title="GenSIP package" href="GenSIP.html" />
+    <link rel="next" title="GenSIP.histomethod package" href="GenSIP.histomethod.html" />
+    <link rel="prev" title="GenSIP.bigscans package" href="GenSIP.bigscans.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gensip-cleantests-package">
+<h1>GenSIP.cleantests package<a class="headerlink" href="#gensip-cleantests-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="gensip-cleantests-calibrate-module">
+<h2>GenSIP.cleantests.calibrate module<a class="headerlink" href="#gensip-cleantests-calibrate-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-GenSIP.cleantests.dirt">
+<span id="gensip-cleantests-dirt-module"></span><h2>GenSIP.cleantests.dirt module<a class="headerlink" href="#module-GenSIP.cleantests.dirt" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the functions necessary for analyzing the dirt on a foil used
+in the cleantests method.</p>
+<dl class="function">
+<dt id="GenSIP.cleantests.dirt.analyzeDirt">
+<code class="descclassname">GenSIP.cleantests.dirt.</code><code class="descname">analyzeDirt</code><span class="sig-paren">(</span><em>sss</em>, <em>res</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/dirt.html#analyzeDirt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.dirt.analyzeDirt" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the master script that takes in a Sample Set String and runs the 
+comparison functions on all of the foil pictures in the before and after 
+folders of that sample set.</p>
+<blockquote>
+<div><p>Inputs:
+- sss -  The Sample Set String, a short identifier for whichever set</p>
+<blockquote>
+<div>of SEM scans you are running.</div></blockquote>
+<ul class="simple">
+<li>res - Resolution of the image, in square microns per pixel.</li>
+</ul>
+<p>Key-Word Arguments:
+- verbose = False - prints verbose output if set to True.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.dirt.dirtComp">
+<code class="descclassname">GenSIP.cleantests.dirt.</code><code class="descname">dirtComp</code><span class="sig-paren">(</span><em>beforeImg</em>, <em>afterImg</em>, <em>res</em>, <em>MaskEdges=True</em>, <em>retSizeData=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/dirt.html#dirtComp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.dirt.dirtComp" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the dirt compare foils function. It takes the before and after images and 
+returns the number of dirt particles and area of dirt on each foil, and 
+the thresholded images used to calculate the amount of dirt.</p>
+<dl class="docutils">
+<dt>Inputs: </dt>
+<dd><ul class="first last simple">
+<li>img - image as a numpy.ndarray</li>
+<li>res - resolution of the image in square microns/pixel</li>
+</ul>
+</dd>
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>MaskEdges = True - option to automatically mask off the background if </dt>
+<dd><p class="first last">set to True</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">retSizeData = False - option to return the dirt size data if set to True</p>
+</li>
+<li><p class="first">verbose = False - prints verbose output if set to True.</p>
+</li>
+</ul>
+</dd>
+<dt>Returns 2 tuples (or 3 if retSizeData = True):</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>ret - numerical dirt comparison data:</dt>
+<dd><ul class="first last simple">
+<li>numBef - number of dirt particles</li>
+<li>numAft</li>
+<li>areaBef - total area of dirt particles in square microns</li>
+<li>areaAft</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>picts - the thresholded images</dt>
+<dd><ul class="first last simple">
+<li>threshedBef</li>
+<li>threshedAft</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>sizeData - </dt>
+<dd><ul class="first last">
+<li><p class="first">BefMean - mean dirt particle size in square microns</p>
+</li>
+<li><p class="first">AftMean</p>
+</li>
+<li><p class="first">BefMax - maximum dirt particle size in square microns</p>
+</li>
+<li><p class="first">AftMax</p>
+</li>
+<li><dl class="first docutils">
+<dt>BefPercOver100 - Percent of particles with an approximate diameter </dt>
+<dd><p class="first last">greater than 100 microns</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">AftPercOver100</p>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.dirt.dirtnalysis">
+<code class="descclassname">GenSIP.cleantests.dirt.</code><code class="descname">dirtnalysis</code><span class="sig-paren">(</span><em>img</em>, <em>res</em>, <em>MaskEdges=True</em>, <em>retSizes=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/dirt.html#dirtnalysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.dirt.dirtnalysis" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Runs molybdenum analysis on a given image. </dt>
+<dd><p class="first">Inputs: 
+- img - image as a numpy.ndarray
+- res - resolution of the image in square microns/pixel
+Key-Word Arguments:
+- MaskEdges = True - option to automatically mask off the background if</p>
+<blockquote>
+<div>set to True</div></blockquote>
+<ul class="simple">
+<li>retSizes = False - option to returnt the dirt size data if set to True</li>
+<li>verbose = False - prints verbose output if set to True.</li>
+</ul>
+<dl class="last docutils">
+<dt>Returns a tuple containing:</dt>
+<dd><p class="first">num - number of dirt particles
+area - area of the dirt in the image in square microns
+threshed - the dirt thresholded image (white dirt on black background)</p>
+<blockquote>
+<div>as a numpy ndarray</div></blockquote>
+<dl class="last docutils">
+<dt>sizes[optional] -  a 1-dimensional numpy ndarray listing out the sizes</dt>
+<dd>(area) of each dirt particle in pixels</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.dirt.isolateDirt">
+<code class="descclassname">GenSIP.cleantests.dirt.</code><code class="descname">isolateDirt</code><span class="sig-paren">(</span><em>img</em>, <em>MaskEdges=True</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/dirt.html#isolateDirt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.dirt.isolateDirt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs the thresholding on an image</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.cleantests.moly">
+<span id="gensip-cleantests-moly-module"></span><h2>GenSIP.cleantests.moly module<a class="headerlink" href="#module-GenSIP.cleantests.moly" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the functions necessary for analyzing the molybdenum loss
+on individual foils due to a cleaning test.</p>
+<dl class="function">
+<dt id="GenSIP.cleantests.moly.MoComp">
+<code class="descclassname">GenSIP.cleantests.moly.</code><code class="descname">MoComp</code><span class="sig-paren">(</span><em>beforeImg</em>, <em>afterImg</em>, <em>res</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/moly.html#MoComp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.moly.MoComp" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the exposed platinum compare foils function. It takes the pathnames 
+of two images (before and after) and the image resolution, in square microns
+per pixel.</p>
+<p>NOTE: This function assumes before and after images have the same resolution!</p>
+<dl class="docutils">
+<dt>MoComp returns two tuples: </dt>
+<dd><dl class="first last docutils">
+<dt>-The first tuple contains the area of exposed platinum before and after </dt>
+<dd>cleaning, the area of moly loss, the micrograms of moly lost, and the 
+approximate % of the original molybdenum lost.</dd>
+<dt>-The second tuple contains the binary before and after images of the</dt>
+<dd>exposed platinum used in these calculations.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.moly.Monalysis">
+<code class="descclassname">GenSIP.cleantests.moly.</code><code class="descname">Monalysis</code><span class="sig-paren">(</span><em>img</em>, <em>res</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/moly.html#Monalysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.moly.Monalysis" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Runs molybdenum analysis on a given image. </dt>
+<dd><p class="first">Inputs: 
+- img - image as a numpy.ndarray
+- res - resolution of the image in square microns/pixel
+Key-Word Arguments:
+- verbose = False - prints verbose output if set to True.
+Returns a tuple containing:</p>
+<blockquote class="last">
+<div>PtArea - area of exposed platinum in square microns
+MolyArea - area of the molybdenum in the image in square microns
+MolyMass - mass of the molybdenum on the foil in micrograms
+PtImg - the platinum thresholded image as a numpy ndarray</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.moly.analyzeMoly">
+<code class="descclassname">GenSIP.cleantests.moly.</code><code class="descname">analyzeMoly</code><span class="sig-paren">(</span><em>sss</em>, <em>res</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/moly.html#analyzeMoly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.moly.analyzeMoly" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the master function for comparing the exposed Pt on foil images.
+It takes in a &#8216;Sample Set String&#8217; (&#8216;sss&#8217;) and runs the comparison functions 
+on all of the foil pictures in the before and after folders of that sample set. 
+res is the resolution of the image, as micron per pixel. default set to one.</p>
+<blockquote>
+<div><p>Inputs:
+- sss -  The Sample Set String, a short identifier for whichever set</p>
+<blockquote>
+<div>of SEM scans you are running.</div></blockquote>
+<ul class="simple">
+<li>res - Resolution of the image, in square microns per pixel.</li>
+</ul>
+<p>Key-Word Arguments:
+- verbose = False - prints verbose output if set to True.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.cleantests.moly.isolatePt">
+<code class="descclassname">GenSIP.cleantests.moly.</code><code class="descname">isolatePt</code><span class="sig-paren">(</span><em>image</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/cleantests/moly.html#isolatePt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.cleantests.moly.isolatePt" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function filters and thresholds the image using regionalThres in order 
+to estimate the area of exposed Pt. Argument &#8220;image&#8221; must be ndarray.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="gensip-cleantests-tests-cleantests-module">
+<h2>GenSIP.cleantests.tests_cleantests module<a class="headerlink" href="#gensip-cleantests-tests-cleantests-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-GenSIP.cleantests">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-GenSIP.cleantests" title="Permalink to this headline">¶</a></h2>
+<p>The cleantests package deals with analyzing the before and after effects of a 
+cleaning test.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GenSIP.cleantests package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#gensip-cleantests-calibrate-module">GenSIP.cleantests.calibrate module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.cleantests.dirt">GenSIP.cleantests.dirt module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.cleantests.moly">GenSIP.cleantests.moly module</a></li>
+<li><a class="reference internal" href="#gensip-cleantests-tests-cleantests-module">GenSIP.cleantests.tests_cleantests module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.cleantests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="GenSIP.html">GenSIP package</a><ul>
+      <li>Previous: <a href="GenSIP.bigscans.html" title="previous chapter">GenSIP.bigscans package</a></li>
+      <li>Next: <a href="GenSIP.histomethod.html" title="next chapter">GenSIP.histomethod package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GenSIP.cleantests.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/GenSIP.cleantests.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

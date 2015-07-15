@@ -12,7 +12,10 @@ from socket import gethostname
 ###################################################################################
 
 class DataToCSV (object):
-    
+    """
+    Class that contains methods that write data from data dictionaries to 
+    a specifically formatted SV file.
+    """
     def __init__(self,filepath,title,mode='w+b'):
         """ Creates a CSV file. 
                 filepath - path of CSV file
@@ -141,7 +144,7 @@ class DataToCSV (object):
                     # accounted for in the colHeads
                     colHeads.extend([k for k in Keys if (type(dataDict[sub][k])!=dict) and not(k in colHeads)])
         Rows.append(colHeads)
-        """ Populate the rows for each item in the dictionary """
+        # Populate the rows for each item in the dictionary 
         for sub in names:
             if type(dataDict[sub])==dict:
                 row = ["'"+sub]
@@ -150,7 +153,7 @@ class DataToCSV (object):
                     row.append(entry)
             Rows.append(row)
             
-        """Make the Footer"""
+        # Make the Footer
         # Separate the footer with a spacer row:
         spaceRow = ['']
         Rows.append(spaceRow)
@@ -171,7 +174,14 @@ class DataToCSV (object):
         self.AllRows.extend(Rows)
     
     ###################################################################################
-    
+    def writeRow(self, row):
+        self.dataWriter.writerow(row)
+        
+    ###################################################################################
+    def writeRows(self, rows):
+        self.dataWriter.writerows(rows)
+        
+    ###################################################################################
     def closeCSVFile(self):
         """Closes the CSV file"""
         self.CSVfile.close()

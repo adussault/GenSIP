@@ -2,12 +2,22 @@
 Contains thresholding, masking, and flooding operations. Called 'binaryops' 
 because these functions all produce or deal with binary images.
 
+The flooding functions were made to try and better identify dirt particles. The
+idea was to threshold the image at a low threshold level to identify part of the
+dirt particles, and then use that threshold image as a seed for the flood procedure 
+in order to "fill out" the rest of the dirt particles. 
+
+Also includes two basic thresholding operations. 
+
 Functions include:
-   floodByThresh
-   floodBySeed 
-   FloodStep
-   threshold
-   easythreshold
+   floodByThresh - runs a flooding algorithm given a threshold value. Uses the image
+        produced by that threshold as a seed.
+   floodBySeed - takes a gray image and a binary image and uses the binary image 
+        as a seed to flood fill portions of the gray image, given certain parameters
+   FloodStep - one step in the Flood process
+   threshold - thresholds an image
+   easythreshold - thresholds an image
+   
 """
 
 import numpy as np
@@ -156,18 +166,7 @@ def FloodStep(img, seed, d, upBound, lowBound, growthMin=0, growthMax=1000, verb
         print "  Less than max? " + str(growth<growthMax)
         print "  More than min? " + str(growth>growthMin)
     return ret, growth
-    
-    '''
-    imask,jmask = np.where((img>=min0)&(img<=max0))
-    imask,jmask = imask.copy(),jmask.copy()
-    if Binary:
-        ret = np.zeros(img.shape).astype(np.bool_)
-        ret[imask,jmask] = True
-    else:
-        ret = np.zeros(img.shape).astype(img.dtype)
-        ret[imask,jmask] = img[imask,jmask]
-    return ret
-    '''
+
 def threshold(img, MIN,MAX=255,Binary=True,Bool=False):
     '''
     A home made simple thresholding function. Not as robust as the one in opencv

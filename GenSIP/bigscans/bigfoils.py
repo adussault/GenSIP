@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
- This is the main module for analyzing the SEM scans of the large foils. 
+ This is the main module for analyzing the SEM scans of the large foils. It 
+ contains a function analyzePano that takes a large panorama image (>100Mb type 
+ images) and its corresponding mask image (of the same dimensions) and divides 
+ them up into 256 sub images, and then hands off analysis of those subimages to 
+ the function analyzeSubImages. 
+ Once the panorama image is divided up, you can call analyzeSubImages directly 
+ using the filepaths to the folder of subimages and mask subimages. 
 '''
 import cv2
 import os
@@ -11,16 +17,13 @@ import GenSIP.functions as fun
 import GenSIP.measure as meas
 import GenSIP.bigscans.images as images
 import GenSIP.gencsv as gencsv
-
-
-#Q1 = fun.loadImg("InputPicts/FoilScans/Q1/panorama.tif",0)
-
+from GenSIP.histomethod.foldertools import FILonlySubimages
 ################################################################################
 
 ################################################################################
 
 def analyzePano(panPath, maskPath, res, foilname, 
-                Quarter="", MoDirt="Mo", GenPoster=False, verbose=True):
+                Quarter="", MoDirt="Mo", genPoster=False, verbose=True):
     """
     This function runs full analysis on a single panorama SEM scan of a foil. 
     Essentially all this does is split up the panorama and mask images, puts 
@@ -49,7 +52,7 @@ def analyzePano(panPath, maskPath, res, foilname,
             analysis. Allowable inputs:
                 "Mo","Moly","moly","molybdenum","Molybdenum","M","m"
                 or for dirt analysis: "Dirt","dirt","D","d"
-        - GenPoster - option if the user wants to generate and save poster images
+        - genPoster - option if the user wants to generate and save poster images
             in order to see how the image is split up into regions. 
     """
     print "MoDirt:  " + MoDirt
@@ -65,7 +68,7 @@ def analyzePano(panPath, maskPath, res, foilname,
     maskFolder = "InputPicts/FoilScans/"+foilname+"/sub_imgs_"+Quarter+"_mask"
     
     # Call analyze sub images. 
-    analyzeSubImages(panFolder,maskFolder,res,foilname,Quarter,MoDirt,GenPoster)
+    analyzeSubImages(panFolder,maskFolder,res,foilname,Quarter,MoDirt,genPoster)
 
 ################################################################################
 
@@ -73,7 +76,7 @@ def analyzePano(panPath, maskPath, res, foilname,
 
 
 def analyzeSubImages(panFolder, maskFolder, res, foilname,  
-                     Quarter="", MoDirt="Mo",  GenPoster=False, verbose=False):
+                     Quarter="", MoDirt="Mo",  genPoster=False, verbose=False):
     """
     This function runs the analysis on all of the subimages of the panorama. It 
     writes the output to a csv file and produces images of the dirt and exposed 
@@ -96,7 +99,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
             analysis. Allowable inputs:
                 "Mo","Moly","moly","molybdenum","Molybdenum","M","m"
                 or for dirt analysis: "Dirt","dirt","D","d"
-        - GenPoster - option if the user wants to generate and save poster images
+        - genPoster - option if the user wants to generate and save poster images
             in order to see how the image is split up into regions. 
                 
     """
@@ -120,7 +123,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
         os.makedirs(outFolder)
     
     # Create output folder for the poster if it does not exist and is requested
-    if GenPoster and not os.path.exists(outFolder+"/PosterMaps"):
+    if genPoster and not os.path.exists(outFolder+"/PosterMaps"):
         os.makedirs(outFolder+"/PosterMaps")
     
     # Use checkMoDirt to limit MoDirt's value to either 'mo' or 'dirt' 
@@ -156,7 +159,8 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
         # ImgAnalysis always outputs two tuples: stats and picts
         stats, picts = ImgAnalysis(subImage, subMask, 
                                    res, MoDirt=MoDirt, 
-                                   returnSizeData=True)
+                                   returnSizeData=True, 
+                                   verbose=verbose)
                                    
         # Extract the thresholded image and poster from the picts tuple
         (threshed,
@@ -214,7 +218,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
         totArea += Area
         totFoilArea += AreaFoil
         
-        if GenPoster:
+        if genPoster:
             cv2.imwrite(outFolder+'/PosterMaps/'+name+".png", 
                         poster, 
                         [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
@@ -225,7 +229,7 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
     # Stitch together montage images
     images.stitchImage(MapFolder)
     
-    if GenPoster:
+    if genPoster:
         images.stitchImage(outFolder+'/PosterMaps')
     
     """ Calculate the Totals """ 
@@ -280,13 +284,47 @@ def analyzeSubImages(panFolder, maskFolder, res, foilname,
 
 ################################################################################
 
-def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False,returnSizes=False):
-    
+def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False,returnSizes=False,verbose=False):
+    """
+    Performs analysis on a single image given the image, the mask, and the resolution.
+    Inputs: 
+        - img - image as a numpy.ndarray
+        - mask - mask of the image, must have the same dimensions as img
+        - res - resolution of the image in square microns/pixel
+    Key-Word Arguments:
+        - MoDirt - option to perform molybdenum or dirt analysis on the image
+        - MaskEdges = True - option to automatically mask off the background if 
+            set to True
+        - retSizeData = False - option to return the dirt size data if set to True
+        - retSizes = False - option to return the raw dirt sizes in pixel area if set to True
+        - verbose = False - prints verbose output if set to True.
+    Returns 2 tuples (or 3 if retSizeData = True):
+        • stats - numerical molybdenum or dirt data:
+            - numDirt - number of dirt particles
+            - Area
+            - AreaDirt - total area of dirt particles in square microns
+            - Perc - percentage of foil covered in dirt
+            <optional if retSizeData=True>:
+            - MeanSize - Mean dirt particle area in square microns
+            - MaxSize - Max dirt particle area in square microns
+            - percAreaOver100 - Percent of particles with an approximate diameter 
+                                greater than 100 microns
+            <optional if retSizes=True>:
+            - sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)
+                      of each dirt particle in pixels 
+                      
+        • picts - the thresholded dirt or platinum images and poster
+            - threshed
+            - poster
+    """
     MoDirt = fun.checkMoDirt(MoDirt)
-    threshed, poster = threshImage(img, Mask=mask,MoDirt=MoDirt)
+    # Threshold the image and get the area of the foil by taking the area of the
+    # mask that is not masked off
+    threshed, poster = threshImage(img, Mask=mask,MoDirt=MoDirt,verbose=verbose)
     PixFoil = np.sum(mask.astype(np.bool_))
     AreaFoil = round(PixFoil*res*10**-6, 4)
     
+    # Calculate the Molybdenum or Dirt information from the thresholded image
     if MoDirt=='mo':
         Area = meas.calcExposedPt(threshed, res, getAreaInSquaremm=True)
         stats = []
@@ -332,10 +370,10 @@ def ImgAnalysis(img, mask, res, MoDirt='mo',returnSizeData=False,returnSizes=Fal
 ################################################################################
 
 
-def threshImage(img, Mask=False,MoDirt='mo'):
+def threshImage(img, Mask=False,MoDirt='mo',verbose=False):
     """
     Takes an image and optional mask and MoDirt option and preprocesses the image
-    and performs regionalThresh on it, and returns the trhesholded image and the 
+    and performs regionalThresh on it, and returns the thresholded image and the 
     poster. 
     """
     proc = images.bigPostPreProc(img)
@@ -349,7 +387,8 @@ def threshImage(img, Mask=False,MoDirt='mo'):
                                      m=210,
                                      hE=240,
                                      pt=253,
-                                     MoDirt=MoDirt)
+                                     MoDirt=MoDirt,
+                                     verbose=verbose)
                                      
     elif fun.checkMoDirt(MoDirt)=='dirt':
         threshed = bigRegionalThresh(img,poster,
@@ -359,7 +398,8 @@ def threshImage(img, Mask=False,MoDirt='mo'):
                                      m=55,
                                      hE=60,
                                      pt=70,
-                                     MoDirt=MoDirt)
+                                     MoDirt=MoDirt,
+                                     verbose=verbose)
                                      
     threshed = threshed.astype(np.uint8)
     return threshed, poster
@@ -368,19 +408,17 @@ def threshImage(img, Mask=False,MoDirt='mo'):
 
 ################################################################################
 
-def bigRegionalThresh(ogimage,poster,p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,threshType=0L,Mask=0,GetMask=0,MoDirt="Mo"):
+def bigRegionalThresh(ogimage,poster,
+                      p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,
+                      threshType=0L,Mask=0,GetMask=0,MoDirt="Mo",verbose=False):
     """
-     This is the main thresholding method for analyzing the amount of Pt and dirt on
-    the foils. It takes the posterized image and splits the image into regions based on
-    the gray level in these different regions, then it assigns different threshold parameters 
-    to the different regions, specified by the arguments p,d,m, and pt, which correspond to the
-    regions 'pleat','dark Molybdenum', 'Molybdenum,' and 'platinum.' For the large scans,
-    an additional region called "highEx" or high exposure, was created above Pt. 
-    
-     regionalThresh returns the final thresholded image with the black area around the foil
-    cut out so that only the dirt appears. This allows mh.label to count the dirt and not get
-    thrown off by the foil outline. If the option "GetMask" is set to True, then regionalThresh
-    also returns the image of the outline of the foil and all regions that are black (<5).
+     This is the main thresholding method for analyzing the amount of Pt and dirt
+     on the foils. It takes the posterized image and splits the image into regions 
+     based on the gray level in these different regions, then it assigns different
+     threshold parameters to the different regions, specified by the arguments p,
+     d,m, and pt, which correspond to the regions 'pleat','dark Molybdenum', 
+     'Molybdenum,' and 'platinum.' For the large scans, an additional region 
+     called "highEx" or high exposure, was created above Pt. 
     """
     if poster.shape != ogimage.shape:
         raise Exception("The two arrays are not the same shape.")
@@ -404,7 +442,26 @@ def bigRegionalThresh(ogimage,poster,p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,thres
     Mo[Mo!=150]=0
     highEx[highEx!=200]=0
     Pt[Pt!=255]=0
-
+    
+    if verbose:
+        print "'Platinum' region (poster graylevel 255):"
+        print "    Threshold value = " + str(pt)
+        print "    Number of pixels in region = " + str(Pt[Pt==255].size)
+        print "'High Exposure' region (poster graylevel 200):"
+        print "    Threshold value = " + str(hE)
+        print "    Number of pixels in region = " + str(highEx[highEx==200].size)
+        print "'Molybdenum' region (poster graylevel 150):"
+        print "    Threshold value = " + str(m)
+        print "    Number of pixels in region = " + str(Mo[Mo==150].size)
+        print "'Dark Molybdenum' region (poster graylevel 85):"
+        print "    Threshold value = " + str(d)
+        print "    Number of pixels in region = " + str(darkMo[darkMo==85].size)
+        print "'Pleat' region (poster graylevel 50):"
+        print "    Threshold value = " + str(p)
+        print "    Number of pixels in region = " + str(pleat[pleat==85].size)
+        print "'Black' region (poster graylevel 0) masked off from analysis"
+        print "    Number of pixels in region = " + str(blk[blk==0].size)
+        
     # mask the original image
     pleatMask = cv2.GaussianBlur(Image, (5,5), 0)
     pleatMask = (pleat/50)*pleatMask
@@ -465,106 +522,3 @@ def bigRegionalThresh(ogimage,poster,p=8,d=28,m=55,hE=60,pt=70,gaussBlur=3,thres
 
 ################################################################################
 
-
-#Also can be found in sandbox.foldertools. Will probably consolidate that later.
-def FILonlySubimages(contents, limitToType=0):
-    '''
-    Takes a list of folder contents and returns only the items that are subImages
-    Kwargs:
-         - limitToType - if limitToType is a string, return only items ending with
-                         that string, i.e. limitToType = '.tif' filters all but .tif
-                         files.
-                       - limitToType can also be a list, set, or tuple of strings
-                       - if limitToType is anything else, it will not do anything
-    '''
-    contents[:] = [img for img in contents if img.startswith("sub_")]
-    if type(limitToType) in (list, tuple, set):
-        contents[:] = [img for img in contents if os.path.splitext(img) in limitToType]
-    elif type(limitToType)==str:
-        contents[:] = [img for img in contents if img.endswith(limitToType)]
-    return contents
-
-''' 
-EXTRA CODE:
-       
-def test(subfolder):
-    contents = os.listdir(subfolder)
-    data = open("data.csv","w+b")
-    writer = csv.writer(data)
-    writer.writerow(["Foilnum","Count","Area"])
-    for sub in contents:
-        image = fun.loadImg(subfolder+"/"+sub,0)
-        numDirt, areaDirt = bigAmountDirt(image)
-        print sub + " Count: "+str(numDirt)+" Area: "+str(areaDirt)
-        writer.writerow([sub, numDirt, areaDirt])
-        
-################################################################################
-
-################################################################################
-
-def makeDirtMap(panImage, maskImage, MoDirt='dirt'):
-    """
-    Test function
-    """
-    # Create the threshholded image
-    subImage = fun.loadImg(panImage,0)
-    subMask = fun.loadImg(maskImage,0)
-    proc = images.bigPostPreProc(subImage)
-    poster = images.bigPosterfy(proc)
-    threshed = bigRegionalThresh(subImage,poster,Mask=subMask,\
-    p=8,d=28,m=55,pt=60,hE=90,MoDirt=MoDirt)
-    threshed = threshed.astype(np.uint8)*255
-    return threshed, subMask
-
-################################################################################
-
-################################################################################
-
-def countDirt(threshed, subMask,res=4,verbose=True):
-    """
-    Test function
-    """
-    # Get amount of dirt and write output to csv file:
-    numDirt, PixDirt = bigAmountDirt(threshed)
-    if verbose: print "NumDirt: "+str(numDirt)
-    if verbose: print "PixDirt: " + str(PixDirt)
-    AreaDirt = round(float(PixDirt)*res*10**-6, 6)
-    PixFoil = np.sum(subMask.astype(np.bool_))
-    AreaFoil = round(float(PixFoil)*res*10**-6, 6)
-    if AreaFoil == 0:
-        PercDirt = np.nan
-    else:
-        PercDirt = round(float(AreaDirt)/float(AreaFoil)*100,2)
-    return PercDirt
-def bigAmountDirt(img):
-    """
-
-    OBSLETE. TRANSITIONED TO measure.calcDirt.
-    Calculates the number of dirt particles and the area of the foil covered by dirt
-    Takes a black and white image (black dirt on white foil)
-    Returns the number of dirt particles, the area of dirt particles, and a labelled image
-    inverse the colors since mahotas.label only works on white on black
-
-    """
-    #inv = cv2.bitwise_not(img)
-    inv=img.copy()
-    #invDirt = cv2.bitwise_not(isoDirt(img,profile))
-    labeledFoil,numDirt = mh.label(inv)
-    # Don't count the foil in numDirt:
-    
-    #Calculate the area of the dirt using Findcontours
-    sizes = mh.labeled.labeled_size(labeledFoil)
-    # Sort sizes of particles by size in descending order:
-    sizes = np.sort(sizes)[::-1]
-    # Eliminate the foil from the "sizes" array:
-    sizes = sizes[2:]
-    # Total area of dirt is equal to the sum of the sizes.
-    areaDirt = sum(sizes)
-    return (numDirt, areaDirt)
-
-
-################################################################################
-
-################################################################################
-
-'''    

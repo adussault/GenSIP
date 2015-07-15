@@ -1,5 +1,9 @@
-# This module contains all the functions necessary for analyzing the dirt on a foil
+# -*- coding: utf-8 -*-
+"""
+This module contains the functions necessary for analyzing the dirt on a foil used
+in the cleantests method. 
 
+"""
 import os
 import cv2
 import numpy as np
@@ -12,7 +16,7 @@ import GenSIP.measure as meas
 
 ####################################################################################
 
-def analyzeDirt(sss, res):
+def analyzeDirt(sss, res, verbose=False):
     """
      This is the master script that takes in a Sample Set String and runs the 
      comparison functions on all of the foil pictures in the before and after 
@@ -21,6 +25,8 @@ def analyzeDirt(sss, res):
         - sss -  The Sample Set String, a short identifier for whichever set
                 of SEM scans you are running.
         - res - Resolution of the image, in square microns per pixel. 
+        Key-Word Arguments:
+        - verbose = False - prints verbose output if set to True.
    
     """
     # Declare a list of acceptable file types: tif and jpg
@@ -57,9 +63,12 @@ def analyzeDirt(sss, res):
                 # Load images
                 beforeImg = cv2.imread(befpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
                 afterImg = cv2.imread(aftpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+                if verbose:
+                    print "Now comparing before and after for foil "+str(foilnum)
                 # Compare the two images:
                 dirtVals, dirtPicts, dirtSizes = dirtComp(beforeImg, afterImg, 
-                                                          res, retSizeData=True)   
+                                                          res, retSizeData=True,
+                                                          verbose=verbose)   
                 (numbf,
                  numaf,
                  areabf,
@@ -140,11 +149,37 @@ def analyzeDirt(sss, res):
 
 ####################################################################################
 			
-def dirtComp (beforeImg, afterImg, res, MaskEdges=True, retSizeData=False):
+def dirtComp (beforeImg, afterImg, res, MaskEdges=True, retSizeData=False, verbose=False):
     """
     This is the dirt compare foils function. It takes the before and after images and 
     returns the number of dirt particles and area of dirt on each foil, and 
-    the thresholded images used to calculate the amount of dirt.   
+    the thresholded images used to calculate the amount of dirt. 
+    
+    Inputs: 
+        - img - image as a numpy.ndarray
+        - res - resolution of the image in square microns/pixel
+    Key-Word Arguments:
+        - MaskEdges = True - option to automatically mask off the background if 
+            set to True
+        - retSizeData = False - option to return the dirt size data if set to True
+        - verbose = False - prints verbose output if set to True.
+    Returns 2 tuples (or 3 if retSizeData = True):
+        • ret - numerical dirt comparison data:
+            - numBef - number of dirt particles
+            - numAft
+            - areaBef - total area of dirt particles in square microns
+            - areaAft
+        • picts - the thresholded images
+            - threshedBef
+            - threshedAft
+        • sizeData - 
+            - BefMean - mean dirt particle size in square microns
+            - AftMean
+            - BefMax - maximum dirt particle size in square microns
+            - AftMax
+            - BefPercOver100 - Percent of particles with an approximate diameter 
+                               greater than 100 microns
+            - AftPercOver100
     """
     
     # Dirt analysis
@@ -154,14 +189,16 @@ def dirtComp (beforeImg, afterImg, res, MaskEdges=True, retSizeData=False):
      sizesBef) = dirtnalysis (beforeImg, 
                               res, 
                               MaskEdges=True, 
-                              retSizes=True)
+                              retSizes=True,
+                              verbose=verbose)
     (numAft, 
      areaAft, 
      threshedAft, 
      sizesAft) = dirtnalysis (afterImg, 
                               res, 
                               MaskEdges=True, 
-                              retSizes=True)
+                              retSizes=True,
+                              verbose=verbose)
                               
     BefMean, BefMax, BefPercOver100 = meas.getDirtSizeData(sizesBef, res)
     AftMean, AftMax, AftPercOver100 = meas.getDirtSizeData(sizesAft, res)
@@ -198,13 +235,28 @@ def dirtComp (beforeImg, afterImg, res, MaskEdges=True, retSizeData=False):
 
 ####################################################################################
 
-def dirtnalysis (img, res, MaskEdges=True, retSizes=False):
+def dirtnalysis (img, res, MaskEdges=True, retSizes=False, verbose=False):
     """
-    Performs dirt analysis on one image. 
+    Runs molybdenum analysis on a given image. 
+        Inputs: 
+        - img - image as a numpy.ndarray
+        - res - resolution of the image in square microns/pixel
+        Key-Word Arguments:
+        - MaskEdges = True - option to automatically mask off the background if 
+            set to True
+        - retSizes = False - option to returnt the dirt size data if set to True
+        - verbose = False - prints verbose output if set to True.
+        Returns a tuple containing:
+            num - number of dirt particles
+            area - area of the dirt in the image in square microns
+            threshed - the dirt thresholded image (white dirt on black background) 
+                as a numpy ndarray
+            sizes[optional] -  a 1-dimensional numpy ndarray listing out the sizes
+               (area) of each dirt particle in pixels 
     """
     
     # Dirt analysis
-    threshed, masked = isolateDirt(img)
+    threshed, masked = isolateDirt(img, verbose=verbose)
     area,num,sizes,labelled = meas.calcDirt(threshed, 
                                             res, 
                                             returnSizes=True,
@@ -223,7 +275,8 @@ def dirtnalysis (img, res, MaskEdges=True, retSizes=False):
 
 ####################################################################################
 
-def isolateDirt (img, MaskEdges=True):
+def isolateDirt (img, MaskEdges=True, verbose=False):
+    """Performs the thresholding on an image"""
     poster = fun.makePoster(img)
     threshed,masked = fun.regionalThresh(img, poster,
                                          p=8, 
@@ -232,32 +285,6 @@ def isolateDirt (img, MaskEdges=True):
                                          pt=60,
                                          MaskEdges=MaskEdges,
                                          returnMask=MaskEdges,
-                                         MoDirt='dirt')
+                                         MoDirt='dirt',
+                                         verbose=verbose)
     return threshed, masked
-'''
-EXTRA and OUTDATED CODE:
-    
-def amountDirt(img, res):
-    """
-    Calculates the number of dirt particles and the area of the foil covered by dirt
-    Takes a black and white image (black dirt on white foil)
-    Returns the number of dirt particles, the area of dirt particles, and a labelled image
-    inverse the colors since mahotas.label only works on white on black
-    """
-    inv = cv2.bitwise_not(img)
-    #invDirt = cv2.bitwise_not(isoDirt(img,profile))
-    labeledFoil,numDirt = mh.label(inv)
-    # Don't count the foil in numDirt:
-    numDirt -= 1
-    #Calculate the area of the dirt using Findcontours
-    sizes = mh.labeled.labeled_size(labeledFoil)
-    # Sort sizes of particles by size in descending order:
-    sizes = np.sort(sizes)[::-1]
-    # Eliminate the foil from the "sizes" array:
-    sizes = sizes[2:]
-    # Total area of dirt is equal to the sum of the sizes.
-    areaDirt = sum(sizes)*res
-    return (numDirt, areaDirt, labeledFoil, sizes)
-	
-
-'''

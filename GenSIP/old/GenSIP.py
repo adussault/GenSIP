@@ -1,3 +1,5 @@
+"""Original GenSIP analysis module. Abandoned, but kept around for sentimental reasons."""
+
 #This is the module that defines the functions used in Genesis SEM Image Processing (GenSIP)
 #===============================================================
 #========================###IMPORTS###==========================
@@ -136,29 +138,32 @@ def analyzeDirt(sss):
 			print "Not a picture."
 
 def dirtComp (before, after):
-# This is the dirt compare foils function. It takes the pathnamess of two images (before
-#  and after) and returns the number of dirt particles and area of dirt on each foil, and 
-#  the thresholded images used to calculate the amount of dirt.   
-	# Load images
-	bf = cv2.imread(before, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-	af = cv2.imread(after, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    """ 
+    This is the dirt compare foils function. It takes the pathnamess of two images (before
+    and after) and returns the number of dirt particles and area of dirt on each foil, and 
+    the thresholded images used to calculate the amount of dirt.  
+    """ 
+    # Load images
+    bf = cv2.imread(before, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    af = cv2.imread(after, cv2.CV_LOAD_IMAGE_GRAYSCALE)
 	
-	# Dirt analysis
-	bposter,aposter = makePoster(bf),makePoster(af)
-	bthreshed,bmasked = regionalThresh(bf, bposter, MaskEdges=True,GetMask=True)
-	athreshed,amasked = regionalThresh(af, aposter, MaskEdges=True,GetMask=True)
-	numbf,areabf,labbf,sizesbf = amountDirt(bthreshed)
-	numaf,areaaf,labaf,sizesaf = amountDirt(athreshed)
-        
-        bthreshed = (bmasked/255)*bthreshed
-        athreshed = (amasked/255)*athreshed
-        
-	# put all results into return tuples
-	ret = (numbf,numaf,areabf,areaaf)
-	picts = (bthreshed, athreshed)
-	return ret, picts
+    # Dirt analysis
+    bposter,aposter = makePoster(bf),makePoster(af)
+    bthreshed,bmasked = regionalThresh(bf, bposter, MaskEdges=True,GetMask=True)
+    athreshed,amasked = regionalThresh(af, aposter, MaskEdges=True,GetMask=True)
+    numbf,areabf,labbf,sizesbf = amountDirt(bthreshed)
+    numaf,areaaf,labaf,sizesaf = amountDirt(athreshed)
+
+    bthreshed = (bmasked/255)*bthreshed
+    athreshed = (amasked/255)*athreshed
+    
+    # put all results into return tuples
+    ret = (numbf,numaf,areabf,areaaf)
+    picts = (bthreshed, athreshed)
+    return ret, picts
 
 def MoComp (before, after, res=1):
+    """
 # This is the exposed platinum compare foils function. It takes the pathnamess of two images (before
 #  and after) and the image resolution, in square microns per pixel. Default set to 1.
 #  NOTE: This function assumes before and after images have the same resolution!
@@ -168,44 +173,45 @@ def MoComp (before, after, res=1):
 #        approximate % of the original molybdenum lost.
 #       -The second tuple contains the binary before and after images of the
 #        exposed platinum used in these calculations. 
+    """
 
-	# Load images
-	bf = cv2.imread(before, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-	af = cv2.imread(after, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-
-	# Generate binary thresholds for Platinum:
-	Ptbef,Ptaft = isolatePt(bf),isolatePt(af)
-	
-	# Approximate the percent of molybdenum lost:
-	# Will take the average 
-	foilareabef = getFoilArea(bf,res)
-	foilareaaft = getFoilArea(af,res)
-	# Calculate area of exposed platinum, adjust for resolution:
-	PtAreaBef = calcPtArea(Ptbef)*res
-	PtAreaAft = calcPtArea(Ptaft)*res
-	
-	# Calculate difference in area of exposed Pt:
-	# Normalize values to the area of the before image
-	befaftRatio = foilareabef/foilareaaft
-	areaLoss = PtAreaAft*befaftRatio-PtAreaBef
-        MolyBef = foilareabef-PtAreaBef
-        MolyAft = foilareaaft-PtAreaAft
-        pcntMolyLoss = 1-(MolyAft/MolyBef)*(foilareabef/foilareaaft)
-        pcntMolyLoss = round(pcntMolyLoss*100,1)
-	# Now approximate molybdenum loss:
-	# assuming 1pixel == 1 micron
-	# Moly thickness ~300nm = .3micron, moly density = 10.2 g/cm^3 = 10.2e-9 mg/micron^3
-	molyLoss = areaLoss*.3*10.2*(10**-6) #moly loss in micrograms
-	molyLoss = round(molyLoss,2)
-	
-        # Convert area values to mm^2 instead of microns^2, and round:
-	PtAreaBef = round(PtAreaBef*10**-6, 4)
-	PtAreaAft = round(PtAreaAft*10**-6, 4)
-	areaLoss = round(areaLoss*10**-6, 4)
-	# put all results into return tuples
-	ret = (PtAreaBef, PtAreaAft, areaLoss, molyLoss,pcntMolyLoss)
-	picts = (Ptbef, Ptaft)
-	return ret, picts
+    # Load images
+    bf = cv2.imread(before, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    af = cv2.imread(after, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+    
+    # Generate binary thresholds for Platinum:
+    Ptbef,Ptaft = isolatePt(bf),isolatePt(af)
+    
+    # Approximate the percent of molybdenum lost:
+    # Will take the average 
+    foilareabef = getFoilArea(bf,res)
+    foilareaaft = getFoilArea(af,res)
+    # Calculate area of exposed platinum, adjust for resolution:
+    PtAreaBef = calcPtArea(Ptbef)*res
+    PtAreaAft = calcPtArea(Ptaft)*res
+   	
+    # Calculate difference in area of exposed Pt:
+    # Normalize values to the area of the before image
+    befaftRatio = foilareabef/foilareaaft
+    areaLoss = PtAreaAft*befaftRatio-PtAreaBef
+    MolyBef = foilareabef-PtAreaBef
+    MolyAft = foilareaaft-PtAreaAft
+    pcntMolyLoss = 1-(MolyAft/MolyBef)*(foilareabef/foilareaaft)
+    pcntMolyLoss = round(pcntMolyLoss*100,1)
+    # Now approximate molybdenum loss:
+    # assuming 1pixel == 1 micron
+    # Moly thickness ~300nm = .3micron, moly density = 10.2 g/cm^3 = 10.2e-9 mg/micron^3
+    molyLoss = areaLoss*.3*10.2*(10**-6) #moly loss in micrograms
+    molyLoss = round(molyLoss,2)
+   	
+    # Convert area values to mm^2 instead of microns^2, and round:
+    PtAreaBef = round(PtAreaBef*10**-6, 4)
+    PtAreaAft = round(PtAreaAft*10**-6, 4)
+    areaLoss = round(areaLoss*10**-6, 4)
+    # put all results into return tuples
+    ret = (PtAreaBef, PtAreaAft, areaLoss, molyLoss,pcntMolyLoss)
+    picts = (Ptbef, Ptaft)
+    return ret, picts
 
 
 #_____________________________________________________________
@@ -283,8 +289,10 @@ def makePoster(image,kern=6, KuSize=9,Gaus1=3,Gaus2=11,rsize=.1):
     return prkgr
 
 def posterfy(image,k_size=6):
-# Takes a gray image and sets all values within a given range to a single value
-# this way we can divide up regions into primarily Pt, primarily Mo, dirt, or black
+    """
+    # Takes a gray image and sets all values within a given range to a single value
+    # this way we can divide up regions into primarily Pt, primarily Mo, dirt, or black
+    """
     image_copy=image.copy()
     image_copy=image_copy.astype(np.uint8)
     blk=(image_copy<=4)
@@ -307,15 +315,17 @@ def posterfy(image,k_size=6):
     return image_copy
     
 def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,gaussBlur=3,threshType=0L,MaskEdges=0,GetMask=0):
-# This is the main thresholding method for analyzing the amount of Pt and dirt on
-#   the foils. It takes the posterized image and splits the image into regions based on
-#   the gray level in these different regions, then it assigns different threshold parameters 
-#   to the different regions, specified by the arguments p,d,m, and pt, which correspond to the
-#   regions 'pleat','dark Molybdenum', 'Molybdenum,' and 'platinum.'
-# regionalThresh returns the final thresholded image with the black area around the foil
-#   cut out so that only the dirt appears. This allows mh.label to count the dirt and not get
-#   thrown off by the foil outline. If the option "GetMask" is set to True, then regionalThresh
-#   also returns the image of the outline of the foil and all regions that are black (<5).
+    """
+    # This is the main thresholding method for analyzing the amount of Pt and dirt on
+    #   the foils. It takes the posterized image and splits the image into regions based on
+    #   the gray level in these different regions, then it assigns different threshold parameters 
+    #   to the different regions, specified by the arguments p,d,m, and pt, which correspond to the
+    #   regions 'pleat','dark Molybdenum', 'Molybdenum,' and 'platinum.'
+    # regionalThresh returns the final thresholded image with the black area around the foil
+    #   cut out so that only the dirt appears. This allows mh.label to count the dirt and not get
+    #   thrown off by the foil outline. If the option "GetMask" is set to True, then regionalThresh
+    #   also returns the image of the outline of the foil and all regions that are black (<5).
+    """
     if poster.shape != ogimage.shape:
         raise Exception("The two arrays are not the same shape.")
         return

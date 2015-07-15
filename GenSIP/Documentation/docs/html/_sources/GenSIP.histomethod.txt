@@ -1,0 +1,62 @@
+GenSIP.histomethod package
+==========================
+
+Submodules
+----------
+
+GenSIP.histomethod.binaryops module
+-----------------------------------
+
+.. automodule:: GenSIP.histomethod.binaryops
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.histomethod.datatools module
+-----------------------------------
+
+.. automodule:: GenSIP.histomethod.datatools
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.histomethod.display module
+---------------------------------
+
+.. automodule:: GenSIP.histomethod.display
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.histomethod.foldertools module
+-------------------------------------
+
+.. automodule:: GenSIP.histomethod.foldertools
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.histomethod.histogram_tools module
+-----------------------------------------
+
+.. automodule:: GenSIP.histomethod.histogram_tools
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.histomethod.mainanalysis module
+--------------------------------------
+
+.. automodule:: GenSIP.histomethod.mainanalysis
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: GenSIP.histomethod
+    :members:
+    :undoc-members:
+    :show-inheritance:

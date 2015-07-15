@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.histomethod.display &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.histomethod.display</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains functions for saving and displaying data used in histogram analysis</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.datatools</span> <span class="kn">as</span> <span class="nn">dat</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.histogram_tools</span> <span class="kn">as</span> <span class="nn">hist</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+
+<div class="viewcode-block" id="saveHist"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.display.saveHist">[docs]</a><span class="k">def</span> <span class="nf">saveHist</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">path</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;foil&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Receives a Data dictionary and saves it to path and names it &lt;name&gt;.png&quot;&quot;&quot;</span>
+    <span class="n">FIG</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">PLT</span> <span class="o">=</span> <span class="n">FIG</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+    <span class="n">FIG</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">name</span><span class="o">+</span><span class="s">&quot; Histograms&quot;</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Gray Level&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Count&quot;</span><span class="p">)</span>
+    <span class="n">plotAllSects</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">PLT</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">]</span><span class="o">!=</span><span class="s">&#39;Null&#39;</span><span class="p">:</span>
+            <span class="n">Pt</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectPtThresh</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Pt</span><span class="p">,</span> <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">Pt</span><span class="p">]</span><span class="o">+</span><span class="mi">150</span><span class="p">,</span>
+                     <span class="s">&#39;cv&#39;</span><span class="p">,</span>
+                     <span class="n">label</span><span class="o">=</span><span class="s">&#39;PtThresh&#39;</span><span class="p">)</span>
+    <span class="n">lgnd</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s">&#39;upper center&#39;</span><span class="p">,</span> 
+                      <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-.</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> 
+                      <span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;small&#39;</span><span class="p">,</span>
+                      <span class="n">ncol</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> 
+                      <span class="n">mode</span><span class="o">=</span><span class="s">&quot;expand&quot;</span><span class="p">,</span> 
+                      <span class="n">columnspacing</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+                      <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="c">#Set Max and min of the y axis:</span>
+    <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">),</span><span class="s">&quot;Not a directory: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s">&#39;Histograms/&#39;</span><span class="p">))):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s">&#39;Histograms/&#39;</span><span class="p">))</span>
+        
+    <span class="n">FIG</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s">&#39;Histograms/&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;.png&quot;</span><span class="p">,</span>
+                <span class="n">bbox_extra_artists</span><span class="o">=</span><span class="p">(</span><span class="n">lgnd</span><span class="p">,),</span> 
+                <span class="n">bbox_inches</span><span class="o">=</span><span class="s">&#39;tight&#39;</span><span class="p">)</span>
+                
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Histogram plot for &quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+   </div>
+<div class="viewcode-block" id="plotAllSects"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.display.plotAllSects">[docs]</a><span class="k">def</span> <span class="nf">plotAllSects</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">PLT</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Plots all regions in a data dictionary onto the plot PLT within a figure&quot;&quot;&quot;</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;black&#39;</span><span class="p">,</span><span class="s">&#39;purple&#39;</span><span class="p">,</span><span class="s">&#39;magenta&#39;</span><span class="p">,</span><span class="s">&#39;orange&#39;</span><span class="p">,</span><span class="s">&#39;green&#39;</span><span class="p">,</span><span class="s">&#39;cyan&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">!=</span> <span class="s">&#39;Null&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">==</span><span class="nb">dict</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot; plotted&quot;</span>
+            <span class="n">plotFromDict</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">PLT</span><span class="p">,</span><span class="n">smooColor</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+        </div>
+<div class="viewcode-block" id="plotFromDict"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.display.plotFromDict">[docs]</a><span class="k">def</span> <span class="nf">plotFromDict</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">PLT</span><span class="p">,</span> <span class="n">smooColor</span> <span class="o">=</span> <span class="s">&#39;orange&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    This function recieves a dictionary of the format of an individual region </span>
+<span class="sd">    prodcued by MakeRegions and plots the histogram and histogram data of that region.</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - Data - The data dictionary containing information on all regions and made</span>
+<span class="sd">            by MakeRegions in the newmethod module.</span>
+<span class="sd">        - region - a string giving the region. Must be identical to the key for</span>
+<span class="sd">            the region in the Data dictionary.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">sectData</span> <span class="o">=</span> <span class="n">Data</span><span class="p">[</span><span class="n">region</span><span class="p">]</span>
+    <span class="n">PtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectPtThresh</span><span class="p">(</span><span class="n">sectData</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">DirtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectDirtThresh</span><span class="p">(</span><span class="n">sectData</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c"># Plot less smoothed histogram </span>
+    <span class="c">#PLT.plot(x, dat.smoothed(sectData[&#39;Histogram&#39;]))</span>
+    <span class="c"># Plot smoothed histogram</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> 
+             <span class="n">dat</span><span class="o">.</span><span class="n">nsmooth</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">],</span><span class="n">i</span><span class="o">=</span><span class="mi">6</span><span class="p">),</span>
+             <span class="n">smooColor</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="n">region</span><span class="p">)</span>
+    <span class="c"># Plot Local Maxima</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Max&#39;</span><span class="p">],</span>
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Max&#39;</span><span class="p">]],</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="s">&#39;blue&#39;</span><span class="p">,</span> 
+             <span class="n">label</span><span class="o">=</span><span class="s">&quot;Maxima&quot;</span><span class="p">)</span>
+    <span class="c"># Plot Local Minima</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Min&#39;</span><span class="p">],</span>
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Min&#39;</span><span class="p">]],</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="s">&#39;red&#39;</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s">&quot;Minima&quot;</span><span class="p">)</span>
+    <span class="c"># Plot Mean Value</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Mean&#39;</span><span class="p">],</span>
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Mean&#39;</span><span class="p">]],</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="s">&#39;green&#39;</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s">&quot;Mean Value&quot;</span><span class="p">)</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;MoPeak&#39;</span><span class="p">]),</span>
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="nb">int</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;MoPeak&#39;</span><span class="p">])],</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;^&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="s">&#39;yellow&#39;</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s">&quot;MoPeak&quot;</span><span class="p">)</span>
+    
+    <span class="c"># Plot Platinum threshold Value</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">PtThresh</span><span class="p">,</span><span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">PtThresh</span><span class="p">]</span><span class="o">+</span>\
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="nb">int</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;MoPeak&#39;</span><span class="p">])]</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;v&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="n">smooColor</span><span class="p">,</span>
+             <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s">&#39;PtThresh&#39;</span><span class="p">)</span>
+    
+    <span class="c"># Plot Dirt Threshold Value</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">DirtThresh</span><span class="p">,</span>
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">DirtThresh</span><span class="p">]</span><span class="o">+</span>\
+             <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="nb">int</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;MoPeak&#39;</span><span class="p">])]</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span>
+             <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">,</span>
+             <span class="n">color</span><span class="o">=</span><span class="n">smooColor</span><span class="p">,</span>
+             <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+             <span class="n">label</span><span class="o">=</span><span class="s">&#39;DirtThresh&#39;</span><span class="p">)</span>
+    
+    <span class="c"># Plot Peaks</span>
+    <span class="k">if</span> <span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Peaks&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Peaks&#39;</span><span class="p">],</span>
+                 <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Peaks&#39;</span><span class="p">]],</span>
+                 <span class="s">&#39;g^&#39;</span><span class="p">,</span>
+                 <span class="n">label</span><span class="o">=</span><span class="s">&#39;Peaks&#39;</span><span class="p">)</span>
+    <span class="c"># Plot Valleys</span>
+    <span class="k">if</span> <span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Valleys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Valleys&#39;</span><span class="p">],</span>
+                 <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Valleys&#39;</span><span class="p">]],</span>
+                 <span class="s">&#39;bv&#39;</span><span class="p">,</span>
+                 <span class="n">label</span><span class="o">=</span><span class="s">&#39;Valleys&#39;</span><span class="p">)</span>
+     <span class="c"># Plot negative Inflection points   </span>
+    <span class="k">if</span> <span class="n">sectData</span><span class="p">[</span><span class="s">&#39;NegInfl&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>   
+        <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;NegInfl&#39;</span><span class="p">],</span>
+                 <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;NegInfl&#39;</span><span class="p">]],</span>
+                 <span class="s">&#39;rx&#39;</span><span class="p">,</span>
+                 <span class="n">label</span><span class="o">=</span><span class="s">&#39;Neg Infl. Point&#39;</span><span class="p">)</span>
+    <span class="c"># Plot positive inflection points</span>
+    <span class="k">if</span> <span class="n">sectData</span><span class="p">[</span><span class="s">&#39;PosInfl&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;PosInfl&#39;</span><span class="p">],</span>
+                 <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;Histogram&#39;</span><span class="p">])[</span><span class="n">sectData</span><span class="p">[</span><span class="s">&#39;PosInfl&#39;</span><span class="p">]],</span>
+                 <span class="s">&#39;bx&#39;</span><span class="p">,</span>
+                 <span class="n">label</span><span class="o">=</span><span class="s">&#39;Pos Infl. Point&#39;</span><span class="p">)</span>
+          </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

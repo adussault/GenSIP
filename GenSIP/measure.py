@@ -28,16 +28,18 @@ def calcExposedPt (Ptimage, res,**kwargs):
     if Ptimage.min()!=0 or Ptimage[(Ptimage!=0)&(Ptimage!=Ptimage.max())].size!=0:
     # Make sure the image is binary
         if Ptimage.max() == Ptimage.min():
-            print "image is all white! Platinum area set to zero."
+            print "Warning: Image is all white! Platinum area set to zero."
             areaPt = 0
             return areaPt
         else:
             raise Exception(
-            """Image must be a binary image of 0 and a non-zero number.\n
+            """
+            ERROR: Image must be a binary image of 0 and a non-zero number.\n
             Image Max: {0} \n
             Image Min: {1} \n
-            Other values: {2}""".format(Ptimage.max(),Ptimage.min(),
-            Ptimage[(Ptimage!=Ptimage.min())&(Ptimage!=Ptimage.max())]))
+            Other values: {2}""".format(Ptimage.max(),
+                                        Ptimage.min(),
+                                        Ptimage[(Ptimage!=Ptimage.min())&(Ptimage!=Ptimage.max())]))
     # Convert to uint8 format
     plat = Ptimage.astype(np.uint8)
     # Make sure the image is just made of 1s and 0s
@@ -87,7 +89,7 @@ def calcDirt(img, res, **kwargs):
     
     # Make sure the image is binary
     if img.max() == img.min():
-        print "image is all white! All dirt values set to zero."
+        print "Warning: Image is all white! All dirt values set to zero."
         areaDirt=0
         numDirt=0
         sizes = np.zeros((0,)).astype(np.uint32)
@@ -102,11 +104,13 @@ def calcDirt(img, res, **kwargs):
         
     if img.min()!=0 or np.any(img[img!=img.min()]!=img.max()):
         raise Exception(
-            """Image must be a binary image of 0 and a non-zero number.\n
+            """
+            ERROR: Image must be a binary image of 0 and a non-zero number.\n
             Image Max: {0} \n
             Image Min: {1} \n
-            Other values: {2}""".format(img.max(),img.min(),
-            img[(img!=img.min())&(img!=img.max())]))
+            Other values: {2}""".format(img.max(),
+                                        img.min(),
+                                        img[(img!=img.min())&(img!=img.max())]))
     
     #inv = cv2.bitwise_not(img)
     #invDirt = cv2.bitwise_not(isoDirt(img,profile))
@@ -151,6 +155,18 @@ def calcDirt(img, res, **kwargs):
 ####################################################################################
 
 def getDirtSizeData(DirtSizes, res):
+    """
+    Receives the dirt particle size array and the resolution of the image and 
+    returns some data on the particle sizes.
+    Inputs:
+        - DirtSizes - 1-dimensional ndarray of dirt sizes in pixels.
+        - res - resolution of the image in square microns/pixel area
+    Returns a tuple containing:
+        - MeanSize - Mean dirt particle area in square microns
+        - MaxSize - Max dirt particle area in square microns
+        - percAreaOver100 - Percent of particles with an approximate diameter 
+                            greater than 100 microns
+    """
     if DirtSizes.size==0:
         MeanSize = 0
         MaxSize = 0
@@ -161,7 +177,6 @@ def getDirtSizeData(DirtSizes, res):
         MaxSize = DirtSizes.max()
         # Number of Particles with a diameter approximately over 100 microns,
         # Corresponding to an area of ~7854 square microns. 
-        numOver100 = DirtSizes[DirtSizes>7850].size
         areaOver100 = DirtSizes[DirtSizes>7850].sum()
         percAreaOver100 = round(100*(float(areaOver100)/(DirtSizes.sum())),2)
         
@@ -172,6 +187,15 @@ def getDirtSizeData(DirtSizes, res):
 ####################################################################################
 
 def makeSizeHistogram(sizes, res, name, path):
+    """
+    Makes a histogram of the dirt size data
+    Inputs:
+        - sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)
+                    of each dirt particle in pixels 
+        - res - resolution of the image in square microns/pixel area
+        - name - name of the image to be the title of the histogram plot
+        - path - path to folder to which the histogram plot will be saved. 
+    """
     AreaSizes = sizes*res
     histoRange = AreaSizes.max()
     sizeHist,bins = np.histogram(AreaSizes,bins=histoRange)
@@ -191,210 +215,19 @@ def makeSizeHistogram(sizes, res, name, path):
 ####################################################################################
 
 ####################################################################################
-
-def compareToStandards(function, res, **kwargs):
-    """
-    Takes a function that produces the platinum or dirt map of an image, calculates 
-    the area of exposed platinum or dirt, and then compares it to manually made
-    standards stored in the folder 'standards.'
-    Assumes the arguments of function are (image, res, **kwargs) and the function
-    returns either a black and white image of the platinum or dirt map (white on
-    black), or a tuple where the first element is the platinum/dirt map and the 
-    second element is the regions dictionary that contains all the histogram, 
-    threshold, and morphology information for each poster region.
-    
-    Output format:
-        The output is a dictionary with a format that varies slightly.
-    
-    """
-    MoDirt = kwargs.get("MoDirt",'Mo')
-    # Pop the values of key-word arguments that only compareToStandards uses, so
-    # the remaining kwargs can be passed on to function.
-    returnImages = kwargs.pop("retImages",False)
-    standards = kwargs.pop("stdsDirectory",'standards/')
-    usemasks = kwargs.pop("useMasks",False)
-    
-    directs = os.listdir(standards)
-    directs = [d for d in directs if d.startswith('sub_')]
-    ret = {}
-    ret['MoDirt']=MoDirt
-    for f in directs:
-        pathtodir = standards+f
-        if os.path.isdir(pathtodir) and os.path.exists(pathtodir+'/thresholds.txt'):
-            try: testImg = fun.loadImg(pathtodir+'/'+f+'.tif')
-            except: print pathtodir+'/'+f+'.tif'
-            ret[f] = {}
-            
-            ### MOLYBDENUM COMPARISON________________________________________________________________
-            #########################################################################################
-            
-            if (fun.checkMoDirt(MoDirt)=='mo') and (os.path.exists(pathtodir+'/plat.png')):
-                print f
-                stdPlat = fun.loadImg(pathtodir+'/plat.png')
-                stdPlat[stdPlat!=0]=1
-                
-                if usemasks:
-                    try: mask = fun.loadImg(pathtodir+'/mask.png')
-                    except: mask = 0 
-                    testPlat = function(testImg,res,Mask=mask,**kwargs)
-                else:
-                    testPlat = function(testImg,res,**kwargs)
-                    
-                # If the function output is a tuple, see if it is possible to 
-                # extract a regions dictionary from the output and set it to regDirt.
-                # Then, set testDirt to the first item in the output tuple. 
-                # Otherwise, make regDict an empty dictionary and set testDirt to the 
-                # output. 
-                if type(testPlat)==tuple:
-                    try: regDict = [d for d in testPlat if type(d)==dict][0]
-                    except: regDict = {}
-                    
-                    testPlat = testPlat[0]
-
-                assert type(testPlat)==np.ndarray,"Function must produce an output of type numpy.ndarray. \n"\
-                +"Function output is of type {0}.".format(testPlat.__class__.__name__)
-                testPlat[testPlat!=0] = 1
-                testAreaPlat = calcExposedPt(testPlat,res)
-                stdAreaPlat = calcExposedPt(stdPlat,res)
-                fractCorrect = float(testAreaPlat)/float(stdAreaPlat)
-                error = 1-fractCorrect
-                
-                if returnImages:
-                    ret[f]['testImg'] = testPlat*255
-                    ret[f]['stdImg'] = stdPlat*255
-
-                # if regDict is the regions dictionary returned by the function,
-                # incorporate the data into the return dictionary.
-                if len(regDict)>0:
-                    ret[f]['testData']={}
-                    for reg in regDict:
-                        ret[f]['testData'][reg]=regDict[reg]
-                
-                # Incorporate the thresholding and processing information from 
-                # the thresholds.txt file that comes with the standard.
-                try: threshFile = open(pathtodir+'/thresholds.txt')
-                except: threshFile = 0
-                if type(threshFile)==file:
-                    ret[f]['stdData'] = {}
-                    lines = threshFile.readlines()
-                    PlatData = [line.strip().split('==') for line in lines if line.startswith(('Plat','plat'))]
-                    ret[f]['stdData']['PlatProcInfo'] = [line[2:-2] for line in lines if line.startswith('~ ')]
-                    ret[f]['stdData']['PlatMaxThresh'] = PlatData[0][1]
-                    ret[f]['stdData']['PlatMinThresh'] = PlatData[1][1]
-
-                ret[f]['testAreaPt'] = testAreaPlat
-                ret[f]['stdAreaPt'] = stdAreaPlat
-                ret[f]['FractCorrect'] = fractCorrect
-                ret[f]['FractError'] = error
-               
-            ### DIRT COMPARISON______________________________________________________________________
-            #########################################################################################
-            
-            elif (fun.checkMoDirt(MoDirt)=='dirt') and (os.path.exists(pathtodir+'/dirt.png')):
-                
-                stdDirt = fun.loadImg(pathtodir+'/dirt.png')
-                stdDirt[stdDirt!=0]=1
-                if usemasks:
-                    try: mask = fun.loadImg(pathtodir+'/mask.png')
-                    except: mask = 0 
-                    testDirt = function(testImg,res,Mask=mask,**kwargs)#STANDARD: Mask kwarg is either 0 or the mask image. 
-                else:
-                    testDirt = function(testImg,res,**kwargs)
-                # If the function output is a tuple, see if it is possible to 
-                # extract a regions dictionary from the output and set it to regDirt.
-                # Then, set testDirt to the first item in the output tuple. 
-                # Otherwise, make regDict an empty dictionary and set testDirt to the 
-                # output. 
-                try: regDict = [d for d in testDirt if type(d)==dict][0]
-                except: regDict = {}
-                if type(testDirt)==tuple:
-                    testDirt = testDirt[0]
-                
-                assert type(testDirt)==np.ndarray,"Function must produce an output of type numpy.ndarray. \n"\
-                +"Function output is of type {0}.".format(testDirt.__class__.__name__)
-                testArea,testNum,testSizes = calcDirt(testDirt, res, returnSizes=True)
-                stdinvDirt = np.bitwise_not(stdDirt)
-                stdinvDirt[stdinvDirt!=0] = 1
-                stdArea,stdNum,stdSizes = calcDirt(stdDirt, res, returnSizes=True)
-                
-                try: AreafractCorrect = float(testArea)/float(stdArea)
-                except ZeroDivisionError: AreafractCorrect = np.nan
-                Areaerror = 1-AreafractCorrect
-                try: NumfractCorrect = float(testNum)/float(stdNum)
-                except ZeroDivisionError: NumfractCorrect = np.nan
-                Numerror = 1-NumfractCorrect
-                
-                
-                ## BUILD THE RETURN DICTIONARY FOR THIS STANDARD
-                if returnImages:
-                    ret[f]['testImg'] = testDirt
-                    ret[f]['stdImg'] = stdDirt
-                    
-                # if regDict is the regions dictionary returned by the function,
-                # incorporate the data into the return dictionary.
-                if len(regDict)>0:
-                    ret[f]['testData']={}
-                    for reg in regDict:
-                        ret[f]['testData'][reg]=regDict[reg]
-                
-                # Incorporate the thresholding and processing information from 
-                # the thresholds.txt file that comes with the standard.
-                try: threshFile = open(pathtodir+'/thresholds.txt')
-                except: threshFile = 0
-                if type(threshFile)==file:
-                    ret[f]['stdData'] = {}
-                    lines = threshFile.readlines()
-                    DirtData = [line.strip().split('==') for line in lines if line.startswith(('Dirt','dirt'))]
-                    ret[f]['stdData']['DirtProcInfo'] = [line[2,-2] for line in lines if line.startswith('# ')]
-                    ret[f]['stdData']['DirtMaxThresh'] = DirtData[0][1]
-                    ret[f]['stdData']['DirtMinThresh'] = DirtData[1][1]
-                    
-                # Instantiate the Area, Num, and Sizes dictionaries
-                ret[f]['Area'] = {}
-                ret[f]['Num'] = {}
-                ret[f]['Sizes'] = {}
-                
-                # Populate the Area dictionary with dirt area comparison data
-                ret[f]['Area']['testAreaDirt'] = testArea
-                ret[f]['Area']['stdAreaDirt'] = stdArea
-                ret[f]['Area']['FractCorrect'] = round(AreafractCorrect,4)
-                ret[f]['Area']['FractError'] = round(Areaerror,4)
-                
-                # Populate the Num dictionary with dirt number comparison data
-                ret[f]['Num']['testNumDirt'] = testNum
-                ret[f]['Num']['stdNumDirt'] = stdNum
-                ret[f]['Num']['FractCorrect'] = round(NumfractCorrect,4)
-                ret[f]['Num']['FractError'] = round(Numerror,4)
-                
-                # Populate the Sizes dictionary with dirt sizes comparison data
-                try:
-                    ret[f]['Sizes']['stdMaxSize'] = stdSizes.max()
-                    ret[f]['Sizes']['testMaxSize'] = testSizes.max()
-                    ret[f]['Sizes']['stdMinSize'] = stdSizes.min()
-                    ret[f]['Sizes']['testMinSize'] = testSizes.min()
-                    ret[f]['Sizes']['stdMeanSize'] = round(stdSizes.mean(),4)
-                    ret[f]['Sizes']['testMeanSize'] = round(testSizes.mean(),4)
-                    ret[f]['Sizes']['stdMedianSize'] = np.median(stdSizes)
-                    ret[f]['Sizes']['testMedianSize'] = np.median(testSizes)
-                except ValueError:
-                    print f
-                    print 
-        else:
-            print "Standard " +f+ "does not have a thresholds.txt file."
-            print "Or " + pathtodir+" is not a directory."
-    else:
-        print "Finished"
-    return ret
                
 # ERROR CLASSES:
 class MeasError(Exception):
+    """Generic error for the measure module"""
     pass
     
 class AllWhiteError(MeasError):
+    """Error if image is all white"""
     def __init__(self, msg):
         self.msg = msg
         
 class AllBlackError(MeasError):
+    """Error if image is all black"""
     def __init__(self, msg):
         self.msg = msg
 

@@ -1,0 +1,804 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.histomethod.mainanalysis &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.histomethod.mainanalysis</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">mainanalysis Contains functions for running the histogram method of analyzing the</span>
+<span class="sd">foils. </span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">misc</span>
+
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">GenSIP.kuwahara</span> <span class="kn">as</span> <span class="nn">Kuwahara</span>
+<span class="kn">import</span> <span class="nn">GenSIP.bigscans.images</span> <span class="kn">as</span> <span class="nn">images</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.histogram_tools</span> <span class="kn">as</span> <span class="nn">hist</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.datatools</span> <span class="kn">as</span> <span class="nn">dat</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.binaryops</span> <span class="kn">as</span> <span class="nn">binops</span>
+<span class="kn">import</span> <span class="nn">GenSIP.measure</span> <span class="kn">as</span> <span class="nn">meas</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.foldertools</span> <span class="kn">as</span> <span class="nn">fold</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.display</span> <span class="kn">as</span> <span class="nn">dis</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+
+<div class="viewcode-block" id="runOnSubImgs"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.runOnSubImgs">[docs]</a><span class="k">def</span> <span class="nf">runOnSubImgs</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">maskPath</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">writeToCSV</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">genPoster</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">exten</span><span class="o">=</span><span class="s">&#39;.tif&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">genResults</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs newmethod analyzeImg on a folder of sub images.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">subImgs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">folderpath</span><span class="p">)</span>
+    <span class="n">subImgs</span> <span class="o">=</span> <span class="n">fold</span><span class="o">.</span><span class="n">FILonlySubimages</span><span class="p">(</span><span class="n">subImgs</span><span class="p">)</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">maskPath</span><span class="p">)</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="n">fold</span><span class="o">.</span><span class="n">FILonlySubimages</span><span class="p">(</span><span class="n">masks</span><span class="p">)</span>
+    <span class="n">subImgs</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="n">masks</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">folderpath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)):</span>
+        <span class="n">folderpath</span> <span class="o">=</span> <span class="n">folderpath</span><span class="o">+</span><span class="s">&#39;/&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">maskPath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)):</span>
+        <span class="n">maskPath</span> <span class="o">=</span> <span class="n">maskPath</span><span class="o">+</span><span class="s">&#39;/&#39;</span>
+    <span class="n">subNames</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">exten</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">subImgs</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">subImgs</span><span class="p">:</span>
+        <span class="c"># Make the paths complete</span>
+        <span class="n">subImgs</span><span class="p">[</span><span class="n">subImgs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sub</span><span class="p">)]</span> <span class="o">=</span> <span class="n">folderpath</span><span class="o">+</span><span class="n">sub</span>
+        
+        <span class="k">try</span><span class="p">:</span> <span class="n">masks</span><span class="p">[</span><span class="n">masks</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sub</span><span class="p">)]</span> <span class="o">=</span> <span class="n">maskPath</span><span class="o">+</span><span class="n">sub</span>
+        <span class="k">except</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">sub</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">maskPath</span><span class="p">)</span>
+            <span class="k">return</span>
+            
+    <span class="n">outFolders</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="p">,</span>
+                  <span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/DirtMaps&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PtMaps&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PosterMaps&quot;</span><span class="p">]</span>
+                  
+    <span class="k">if</span> <span class="n">genPoster</span><span class="o">==</span><span class="bp">False</span><span class="p">:</span>
+        <span class="n">outFolders</span><span class="o">=</span><span class="n">outFolders</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">outFolders</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">f</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="c"># initiate results dictionary.</span>
+    <span class="n">Results</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subNames</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">subImgs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">masks</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+            <span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">,</span> <span class="n">Data</span><span class="p">,</span> <span class="n">post</span> <span class="o">=</span> <span class="n">analyzeByHisto</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">res</span><span class="p">,</span>
+                                                        <span class="n">genPoster</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                        <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+                                                        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PosterMaps/&quot;</span><span class="o">+</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;.png&quot;</span><span class="p">,</span>
+                        <span class="n">post</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">,</span> <span class="n">Data</span> <span class="o">=</span> <span class="n">analyzeByHisto</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">res</span><span class="p">,</span>
+                                                  <span class="n">genPoster</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                                  <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+                                                  <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+                                                  
+        <span class="c"># Remove the results from the Data dictionary and put them in the results</span>
+        <span class="c"># Dictionary. If the Data dictionary somehow does not have one of the results,</span>
+        <span class="c"># that entry in the Results dictionary is set to &quot;ERROR&quot;.</span>
+        <span class="n">Results</span><span class="p">[</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">=</span><span class="p">{}</span>
+        <span class="n">Results</span><span class="p">[</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="s">&#39;PtArea&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;PtArea&#39;</span><span class="p">,</span><span class="s">&quot;ERROR&quot;</span><span class="p">)</span>
+        <span class="n">Results</span><span class="p">[</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="s">&#39;dirtArea&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;dirtArea&#39;</span><span class="p">,</span><span class="s">&quot;ERROR&quot;</span><span class="p">)</span>
+        <span class="n">Results</span><span class="p">[</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="s">&#39;dirtNum&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;dirtNum&#39;</span><span class="p">,</span><span class="s">&quot;ERROR&quot;</span><span class="p">)</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        for reg in Data[subNames[i]]:</span>
+<span class="sd">            Results[subNames[i]][reg] = {}</span>
+<span class="sd">            Results[subNames[i]][reg][&#39;PlatThresh&#39;] = Data.get(&#39;PtThresh&#39;,&quot;ERROR&quot;)</span>
+<span class="sd">            Results[subNames[i]][reg][&#39;DirtThresh&#39;] = Data.get(&#39;DirtThresh&#39;,&quot;ERROR&quot;)</span>
+<span class="sd">            Results[subNames[i]][reg][&#39;MoPeak&#39;] = Data.get(&#39;MoPeak&#39;,&quot;ERROR&quot;)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dis</span><span class="o">.</span><span class="n">saveHist</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/DirtMaps/&quot;</span><span class="o">+</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;.png&quot;</span><span class="p">,</span>
+                    <span class="n">DirtMap</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">*</span><span class="mi">255</span><span class="p">,</span> 
+                    <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PtMaps/&quot;</span><span class="o">+</span><span class="n">subNames</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;.png&quot;</span><span class="p">,</span>
+                    <span class="n">PtMap</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">*</span><span class="mi">255</span><span class="p">,</span> 
+                    <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+                    
+    <span class="n">images</span><span class="o">.</span><span class="n">stitchImage</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/DirtMaps&quot;</span><span class="p">)</span>
+    <span class="n">images</span><span class="o">.</span><span class="n">stitchImage</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PtMaps&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+        <span class="n">images</span><span class="o">.</span><span class="n">stitchImage</span><span class="p">(</span><span class="s">&quot;Output/&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;/PosterMaps&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">genResults</span><span class="p">:</span> <span class="k">return</span> <span class="n">Results</span>
+            
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="analyzeByHisto"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.analyzeByHisto">[docs]</a><span class="k">def</span> <span class="nf">analyzeByHisto</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">res</span><span class="p">,</span>
+                   <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>           <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                   <span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;mo&#39;</span><span class="p">,</span>      <span class="n">genPoster</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                   <span class="n">returnData</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs the histogram analysis on an image. </span>
+<span class="sd">    Inputs: </span>
+<span class="sd">        - img - image as a numpy.ndarray</span>
+<span class="sd">        - res - resolution of the image in square microns/pixel</span>
+<span class="sd">    Key-Word Arguments:</span>
+<span class="sd">        - Mask - mask of the image, must have the same dimensions as img. if set </span>
+<span class="sd">                to 0, no mask is used. </span>
+<span class="sd">        - MoDirt - option to perform molybdenum or dirt analysis on the image</span>
+<span class="sd">        - MaskEdges = True - option to automatically mask off the background if </span>
+<span class="sd">            set to True</span>
+<span class="sd">        - returnData = False - </span>
+<span class="sd">        - </span>
+<span class="sd">        - retSizes = False - option to return the raw dirt sizes in pixel area if set to True</span>
+<span class="sd">        - verbose = False - prints verbose output if set to True.</span>
+<span class="sd">    Returns 2 tuples (or 3 if retSizeData = True):</span>
+<span class="sd">        • stats - numerical molybdenum or dirt data:</span>
+<span class="sd">            - numDirt - number of dirt particles</span>
+<span class="sd">            - Area</span>
+<span class="sd">            - AreaDirt - total area of dirt particles in square microns</span>
+<span class="sd">            - Perc - percentage of foil covered in dirt</span>
+<span class="sd">            &lt;optional if retSizeData=True&gt;:</span>
+<span class="sd">            - MeanSize</span>
+<span class="sd">            - MaxSize - </span>
+<span class="sd">            - percAreaOver100 - Percent of particles with an approximate diameter </span>
+<span class="sd">                                greater than 100 microns</span>
+<span class="sd">            &lt;optional if retSizes=True&gt;:</span>
+<span class="sd">            - sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)</span>
+<span class="sd">                      of each dirt particle in pixels </span>
+<span class="sd">                      </span>
+<span class="sd">        • picts - the thresholded dirt or platinum images and poster</span>
+<span class="sd">            - threshed</span>
+<span class="sd">            - poster</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">MoDirt</span><span class="o">!=</span><span class="s">&#39;both&#39;</span><span class="p">:</span>
+        <span class="n">MoDirt</span><span class="o">=</span><span class="n">fun</span><span class="o">.</span><span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+    
+    <span class="p">(</span><span class="n">PtMap</span><span class="p">,</span>
+     <span class="n">DirtMap</span><span class="p">,</span>
+     <span class="n">post</span><span class="p">,</span>
+     <span class="n">Data</span><span class="p">)</span> <span class="o">=</span> <span class="n">generateMapsAndData</span> <span class="p">(</span><span class="n">img</span><span class="p">,</span> 
+                                  <span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">,</span>
+                                  <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> 
+                                  <span class="n">genPoster</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                  <span class="n">genProc</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    # Make the poster</span>
+<span class="sd">    proc = PosterPreProc(img,Mask=Mask,ExcludePt=True)</span>
+<span class="sd">    post = images.bigPosterfy(proc)</span>
+<span class="sd">    # Analyze the image with MakeRegions and New RegThresh</span>
+<span class="sd">    Data = MakeRegions(img,post,Mask=Mask)</span>
+<span class="sd">    PtMap, DirtMap, Data = NewRegThresh(img,</span>
+<span class="sd">                                        Data,</span>
+<span class="sd">                                        Mask=Mask,</span>
+<span class="sd">                                        returnData=True,</span>
+<span class="sd">                                        verbose=verbose)</span>
+<span class="sd">                                        &#39;&#39;&#39;</span>                               
+    <span class="c"># Make sure that the Dirt and Pt maps are binary images of 0 and 1</span>
+    <span class="n">DirtMap</span><span class="p">[</span><span class="n">DirtMap</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">PtMap</span><span class="p">[</span><span class="n">PtMap</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+    
+    <span class="c"># Extract the foil area from the Data dictionary</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">FoilArea</span> <span class="o">=</span> <span class="n">Mask</span><span class="p">[</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="o">*</span><span class="n">res</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">FoilArea</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">size</span><span class="o">*</span><span class="n">res</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span>
+    
+    <span class="c"># Calculate the Pt Area</span>
+    <span class="n">PtArea</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcExposedPt</span><span class="p">(</span><span class="n">PtMap</span><span class="p">,</span><span class="n">res</span><span class="p">,</span> <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    
+    <span class="c"># Calculate the Percent of area that is exposed Pt</span>
+    <span class="k">if</span> <span class="n">FoilArea</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">PercPt</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">PercPt</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="nb">float</span><span class="p">(</span><span class="n">PtArea</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">FoilArea</span><span class="p">))</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+        
+    <span class="c"># Calculate dirt area, number, sizes, and produce labelled image</span>
+    <span class="n">dirtArea</span><span class="p">,</span> <span class="n">dirtNum</span><span class="p">,</span><span class="n">dirtSizes</span><span class="p">,</span><span class="n">labeled</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcDirt</span><span class="p">(</span><span class="n">DirtMap</span><span class="p">,</span>
+                                                        <span class="n">res</span><span class="p">,</span> 
+                                                        <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                        <span class="n">returnLabelled</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                                        <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;dirt Area: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dirtArea</span><span class="p">)</span>   
+        <span class="k">print</span> <span class="s">&quot;dirt part number: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dirtNum</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Sizes: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dirtSizes</span><span class="p">)</span>
+        
+    <span class="c"># Make the return tuples depending on the value of MoDirt and the return </span>
+    <span class="c"># options genPoster, returnData, and returnSizes</span>
+    <span class="k">if</span> <span class="n">MoDirt</span><span class="o">==</span><span class="s">&#39;mo&#39;</span><span class="p">:</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtArea</span><span class="p">,</span> <span class="n">PercPt</span><span class="p">]</span>
+        <span class="n">picts</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtMap</span><span class="p">]</span>
+        
+    <span class="k">elif</span> <span class="n">MoDirt</span><span class="o">==</span><span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">[</span><span class="n">dirtNum</span><span class="p">,</span><span class="n">dirtArea</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">returnSizes</span><span class="p">:</span>
+            <span class="n">stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dirtSizes</span><span class="p">)</span>
+        <span class="n">picts</span> <span class="o">=</span> <span class="p">[</span><span class="n">DirtMap</span><span class="p">]</span>
+        
+    <span class="k">elif</span> <span class="n">MoDirt</span><span class="o">==</span><span class="s">&#39;both&#39;</span><span class="p">:</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtArea</span><span class="p">,</span> <span class="n">PercPt</span><span class="p">,</span> <span class="n">dirtNum</span><span class="p">,</span> <span class="n">dirtArea</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">returnSizes</span><span class="p">:</span>
+            <span class="n">stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dirtSizes</span><span class="p">)</span>
+        <span class="n">picts</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">]</span>
+        
+    <span class="n">stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FoilArea</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">returnData</span><span class="p">:</span>
+        <span class="n">stats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Data</span><span class="p">)</span>
+        
+    <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+        <span class="n">picts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">stats</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">picts</span><span class="p">)</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="generateMapsAndData"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.generateMapsAndData">[docs]</a><span class="k">def</span> <span class="nf">generateMapsAndData</span> <span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">genPoster</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">genProc</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Receives an image and optionally a Mask and returns the PtMap, DirtMap,</span>
+<span class="sd">    Data dictionary and optionally the poster and preprocessed image from NewRegThresh&quot;&quot;&quot;</span>
+    <span class="c"># Make the poster</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">PosterPreProc</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">,</span><span class="n">ExcludePt</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">post</span> <span class="o">=</span> <span class="n">images</span><span class="o">.</span><span class="n">bigPosterfy</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+    <span class="c"># Analyze the image with MakeRegions and NewRegThresh</span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="n">MakeRegions</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">post</span><span class="p">,</span><span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">)</span>
+    <span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">,</span> <span class="n">Data</span> <span class="o">=</span> <span class="n">NewRegThresh</span><span class="p">(</span><span class="n">img</span><span class="p">,</span>
+                                        <span class="n">Data</span><span class="p">,</span>
+                                        <span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">,</span>
+                                        <span class="n">returnData</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+        <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">genProc</span><span class="p">:</span>
+        <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+    <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getFoilArea"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.getFoilArea">[docs]</a><span class="k">def</span> <span class="nf">getFoilArea</span> <span class="p">(</span><span class="n">Data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Returns the total foil area (in Pixels) of all of the regions of the </span>
+<span class="sd">    data dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">areaSum</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
+        <span class="n">areaSum</span> <span class="o">+=</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;RegMask&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">areaSum</span>
+        
+        
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="PosterPreProc"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.PosterPreProc">[docs]</a><span class="k">def</span> <span class="nf">PosterPreProc</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method takes the image of the foil and creates a smoothed Kuwahara image</span>
+<span class="sd">    used to make the poster for regional thresholding.</span>
+<span class="sd">    </span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">            Mask = 0 - Assign the Mask here</span>
+<span class="sd">            kern = 6 - Kernal size for poster opening and closing steps</span>
+<span class="sd">            KuSize = 17 - Size of Kuwahara Filter</span>
+<span class="sd">            Gaus1 = 5 - Size of first Gaussian Blur</span>
+<span class="sd">            Gaus2 = 3 - Size of second Gaussian Blur</span>
+<span class="sd">            rsize = .1 - Resize value</span>
+<span class="sd">            Kuw_only = False - Option to only return the Kuwahara filtered image</span>
+<span class="sd">            ExcludeDirt = True - Option to Exclude dirt </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Mask</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Mask&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="c"># Assign the Mask here</span>
+    <span class="n">kern</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;kern&quot;</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span> <span class="c"># Kernal size for poster opening and closing steps</span>
+    <span class="n">KuSize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;KuSize&quot;</span><span class="p">,</span><span class="mi">17</span><span class="p">)</span> <span class="c"># Size of Kuwahara Filter</span>
+    <span class="n">Gaus1</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Gaus1&quot;</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="c"># Size of first Gaussian Blur</span>
+    <span class="n">Gaus2</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Gaus2&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="c"># Size of second Gaussian Blur</span>
+    <span class="n">rsize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;rsize&quot;</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span> <span class="c"># Resize value</span>
+    <span class="n">Kuw_only</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Kuw_only&quot;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span> <span class="c"># Option to only return the Kuwahara filtered image</span>
+    <span class="n">ExcludeDirt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ExcludeDirt&quot;</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span> <span class="c"># Option to Exclude dirt from approximation of shading </span>
+    <span class="n">ExcludePt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ExcludePt&quot;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span> 
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">image</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    
+    <span class="c"># Calculate the average Apply mask if provided</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">Mask</span><span class="o">.</span><span class="n">shape</span><span class="o">==</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">Mask</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">averageColor</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span> 
+                <span class="n">averageColor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">img</span><span class="p">[(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">img</span><span class="o">&gt;=</span><span class="mi">10</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">img</span><span class="o">&lt;=</span><span class="mi">245</span><span class="p">)]))</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">averageColor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">img</span><span class="p">[(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="n">averageColor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">img</span><span class="p">[(</span><span class="n">img</span><span class="o">&gt;=</span><span class="mi">10</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">img</span><span class="o">&lt;=</span><span class="mi">245</span><span class="p">)]))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">averageColor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">img</span><span class="p">))</span>
+        
+    <span class="k">if</span> <span class="n">ExcludeDirt</span><span class="p">:</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">img</span><span class="o">&lt;=</span><span class="mi">40</span><span class="p">]</span><span class="o">=</span><span class="n">averageColor</span>
+    <span class="k">if</span> <span class="n">ExcludePt</span><span class="p">:</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">img</span><span class="o">&gt;=</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="mi">10</span><span class="p">)]</span><span class="o">=</span><span class="n">averageColor</span>
+        
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">Mask</span><span class="o">.</span><span class="n">shape</span><span class="o">==</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">Mask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">averageColor</span>
+    
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span><span class="n">rsize</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_ERODE</span><span class="p">,</span> <span class="p">(</span><span class="n">kern</span><span class="p">,</span><span class="n">kern</span><span class="p">))</span> <span class="c"># Eliminates most platinum spots</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_DILATE</span><span class="p">,(</span><span class="n">kern</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">kern</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="c"># Eliminates most dirt spots</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">proc</span><span class="p">,(</span><span class="n">Gaus1</span><span class="p">,</span><span class="n">Gaus1</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">Kuwahara</span><span class="o">.</span><span class="n">Kuwahara</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span><span class="n">KuSize</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Kuw_only</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">proc</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">proc</span><span class="p">,(</span><span class="n">Gaus2</span><span class="p">,</span><span class="n">Gaus2</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">proc</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="NewRegThresh"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.NewRegThresh">[docs]</a><span class="k">def</span> <span class="nf">NewRegThresh</span><span class="p">(</span><span class="n">ogimage</span><span class="p">,</span> <span class="n">Data</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;Mo&#39;</span><span class="p">,</span> <span class="n">returnData</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates thresholded images and modifies the Data dictionary for a given image.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Clean up data dictionary. Maxreg is the region with the largest area</span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="n">cleanUpRegData</span><span class="p">(</span><span class="n">Data</span><span class="p">)</span> 
+    <span class="n">Data</span><span class="p">,</span><span class="n">Maxreg</span> <span class="o">=</span> <span class="n">findMaxReg</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+       
+
+    <span class="c"># Initiate the platinum, Area, Molybdenum, and Dirt Sums for each region.</span>
+    <span class="n">Ptsum</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">Allsum</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">MoSum</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">DirtSum</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="n">PtMap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">DirtMap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">Data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Region: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">reg</span><span class="p">)</span>
+        <span class="c">#  Set Threshold value for Pt</span>
+        <span class="n">numPx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;Histogram&#39;</span><span class="p">])</span>
+        <span class="c"># If the region is too small, then use the Pt threshold level of the largest</span>
+        <span class="c"># region</span>
+        <span class="k">if</span> <span class="n">numPx</span><span class="o">&lt;</span><span class="mi">2000</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Selecting Dirt threshold value...&quot;</span>
+            <span class="n">PtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectPtThresh</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">Maxreg</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Selecting Platinum threshold value...&quot;</span>
+            <span class="n">DirtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectDirtThresh</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">Maxreg</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtThresh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PtThresh</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtThresh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">DirtThresh</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">PtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectPtThresh</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">],</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="n">DirtThresh</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">selectDirtThresh</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">],</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtThresh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">PtThresh</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtThresh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">DirtThresh</span>
+            
+        <span class="c"># Make the PtMap using the applyPtThresh function.</span>
+        <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtMap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">applyPtThresh</span><span class="p">(</span><span class="n">ogimage</span><span class="p">,</span>
+                                           <span class="n">PtThresh</span><span class="p">,</span>
+                                           <span class="n">regionMask</span><span class="o">=</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;RegMask&#39;</span><span class="p">],</span>
+                                           <span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+                                           
+        <span class="c"># Make the DirtMap using the applyDirtThresh function.</span>
+        <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtMap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">applyDirtThresh</span><span class="p">(</span><span class="n">ogimage</span><span class="p">,</span>
+                                               <span class="n">DirtThresh</span><span class="p">,</span>
+                                               <span class="n">regionMask</span><span class="o">=</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;RegMask&#39;</span><span class="p">],</span>
+                                               <span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+                                               
+        <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;MolyMap&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">getMolyMap</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtMap&#39;</span><span class="p">],</span>
+                                        <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtMap&#39;</span><span class="p">],</span>
+                                        <span class="n">regionMask</span><span class="o">=</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;RegMask&#39;</span><span class="p">],</span>
+                                        <span class="n">Mask</span><span class="o">=</span><span class="n">Mask</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+        <span class="c"># Combine to overall maps</span>
+        <span class="n">PtMap</span> <span class="o">+=</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtMap&#39;</span><span class="p">]</span>
+        <span class="n">DirtMap</span> <span class="o">+=</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtMap&#39;</span><span class="p">]</span>
+        <span class="n">Ptsum</span> <span class="o">+=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcExposedPt</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;PtMap&#39;</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">DirtSum</span> <span class="o">+=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcDirt</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;DirtMap&#39;</span><span class="p">],</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> 
+        <span class="n">MoSum</span> <span class="o">+=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcExposedPt</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&quot;MolyMap&quot;</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+        
+        
+    <span class="n">Allsum</span> <span class="o">=</span> <span class="n">Ptsum</span><span class="o">+</span><span class="n">DirtSum</span><span class="o">+</span><span class="n">MoSum</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span> <span class="n">PercPt</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">Ptsum</span><span class="o">/</span><span class="n">Allsum</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ZeroDivisionError</span><span class="p">:</span> <span class="n">PercPt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">Ptsum</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Percent Pt: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">PercPt</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span> <span class="n">PercDirt</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">DirtSum</span><span class="o">/</span><span class="n">Allsum</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ZeroDivisionError</span><span class="p">:</span> <span class="n">PercDirt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">DirtSum</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Percent Dirt: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">PercDirt</span><span class="p">)</span>  
+        
+    <span class="k">if</span> <span class="n">returnData</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">PtMap</span><span class="p">,</span> <span class="n">DirtMap</span><span class="p">,</span> <span class="n">Data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">PtMap</span><span class="p">,</span><span class="n">DirtMap</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        if fun.checkMoDirt(MoDirt)==&#39;mo&#39;:</span>
+<span class="sd">            if returnData:</span>
+<span class="sd">                return PtMap, Data</span>
+<span class="sd">            else:</span>
+<span class="sd">                return PtMap</span>
+<span class="sd">        elif fun.checkMoDirt(MoDirt)==&#39;dirt&#39;:</span>
+<span class="sd">            if returnData:</span>
+<span class="sd">                return DirtMap,Data</span>
+<span class="sd">            else:</span>
+<span class="sd">                return DirtMap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="cleanUpRegData"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.cleanUpRegData">[docs]</a><span class="k">def</span> <span class="nf">cleanUpRegData</span><span class="p">(</span><span class="n">Data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Removes regions from the data dictionary that are not in the poster (and hence</span>
+<span class="sd">    simply say &#39;Null&#39;).</span>
+<span class="sd">    Runs &quot;FilterFeatures&quot; on the regions that are in the poster. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;Null&#39;</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">]</span> <span class="o">=</span> <span class="n">FilterFeatures</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">Data</span>
+    </div>
+<div class="viewcode-block" id="findMaxReg"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.findMaxReg">[docs]</a><span class="k">def</span> <span class="nf">findMaxReg</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="s">&quot;Finds the largest region in an image using its Data Dictionary.&quot;</span>
+    <span class="n">largest</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">Maxreg</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">numPx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">Data</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="s">&#39;Histogram&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">numPx</span> <span class="o">&gt;</span> <span class="n">largest</span><span class="p">:</span>
+            <span class="n">largest</span> <span class="o">=</span> <span class="n">numPx</span>
+            <span class="n">Maxreg</span> <span class="o">=</span> <span class="n">reg</span>     
+    <span class="k">if</span> <span class="n">Maxreg</span><span class="o">==</span><span class="s">&#39;&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;No Max region found. Set to &#39;Mo&#39;.&quot;</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="n">largest</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&#39;Keys&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">if</span> <span class="s">&#39;Mo&#39;</span> <span class="ow">in</span> <span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="n">Maxreg</span> <span class="o">=</span> <span class="s">&#39;Mo&#39;</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;&#39;Mo&#39; not in Data dictionary. Set to first key in Data dictionary.&quot;</span>
+            <span class="n">Keys</span> <span class="o">=</span> <span class="n">Data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">Keys</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+            <span class="n">Maxreg</span> <span class="o">=</span> <span class="n">Keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">Data</span><span class="p">,</span><span class="n">Maxreg</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="MakeRegions"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.MakeRegions">[docs]</a><span class="k">def</span> <span class="nf">MakeRegions</span><span class="p">(</span><span class="n">ogimage</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span><span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">gaussBlur</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     This Function breaks up an image into subregions and returns a dictionary </span>
+<span class="sd">     containing information on each subregion that can be used for further anal-</span>
+<span class="sd">     ysis and for setting the threshold levels. </span>
+<span class="sd">     </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">poster</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;The two arrays are not the same shape.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">Image</span> <span class="o">=</span> <span class="n">ogimage</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">gPoster</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>    
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">:</span>
+        <span class="n">Mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    
+    <span class="c"># Analyze histogram for each section:</span>
+
+    <span class="n">blkHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">pleatHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">50</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">dMoHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">85</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">MoHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">150</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">highExHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">200</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    <span class="n">PlatHisto</span><span class="p">,</span> <span class="n">Bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">Image</span><span class="p">[(</span><span class="n">gPoster</span><span class="o">==</span><span class="mi">255</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">)],</span><span class="mi">256</span><span class="p">,(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">))</span>
+    
+    <span class="c"># Put together the labels for the regions Dictionary</span>
+    <span class="n">regions</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;blk&#39;</span><span class="p">,</span><span class="s">&#39;pleat&#39;</span><span class="p">,</span><span class="s">&#39;darkMo&#39;</span><span class="p">,</span><span class="s">&#39;Mo&#39;</span><span class="p">,</span><span class="s">&#39;highEx&#39;</span><span class="p">,</span><span class="s">&#39;Plat&#39;</span><span class="p">]</span>
+
+    <span class="n">graylevels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">85</span><span class="p">,</span><span class="mi">150</span><span class="p">,</span><span class="mi">200</span><span class="p">,</span><span class="mi">255</span><span class="p">]</span>
+    <span class="n">histos</span> <span class="o">=</span> <span class="p">[</span><span class="n">blkHisto</span><span class="p">,</span><span class="n">pleatHisto</span><span class="p">,</span><span class="n">dMoHisto</span><span class="p">,</span><span class="n">MoHisto</span><span class="p">,</span><span class="n">highExHisto</span><span class="p">,</span><span class="n">PlatHisto</span><span class="p">]</span>
+    <span class="c">#features = [range(0,256),range(0,256),range(0,256),range(0,256),range(0,256),range(0,256)]</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="n">getMasksFromPoster</span><span class="p">(</span><span class="n">gPoster</span><span class="p">)</span>
+    
+    <span class="c"># Assemble the regions Dictionary by putting in the data for every region that exists in </span>
+    <span class="c"># the poster</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">):</span> 
+        
+        <span class="n">smoo</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">smoothed</span><span class="p">(</span><span class="n">histos</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">Image</span><span class="p">[</span><span class="n">gPoster</span><span class="o">==</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># Calculate the maximum, minimum, mean pixel value of the region</span>
+            <span class="n">MAX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">Image</span><span class="p">[</span><span class="n">gPoster</span><span class="o">==</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+            <span class="n">MIN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">Image</span><span class="p">[</span><span class="n">gPoster</span><span class="o">==</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+            <span class="n">MEAN</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Image</span><span class="p">[</span><span class="n">gPoster</span><span class="o">==</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">]]))</span>
+            <span class="c"># Determine the peak pixel value of the molybdenum in the region and produce</span>
+            <span class="c"># a histogram of the region with findMo in the histograms module</span>
+            <span class="n">MoPEAK</span><span class="p">,</span><span class="n">histo</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">findMoPeakByImg</span><span class="p">(</span><span class="n">Image</span><span class="p">[</span><span class="n">gPoster</span><span class="o">==</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span><span class="n">returnHist</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="c"># Get all peaks and valleys in the regions histogram</span>
+            <span class="n">PEAKS</span><span class="p">,</span><span class="n">Y</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">getMaxima</span><span class="p">(</span><span class="n">smoo</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+            <span class="n">VALLEYS</span><span class="p">,</span><span class="n">Y</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">getMinima</span><span class="p">(</span><span class="n">smoo</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+            <span class="c"># Get all inflection points in the Histogram</span>
+            <span class="n">NEGINFL</span><span class="p">,</span><span class="n">Y</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">getInflectionPoints</span><span class="p">(</span><span class="n">smoo</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">sign</span> <span class="o">=</span> <span class="s">&#39;negative&#39;</span><span class="p">)</span>
+            <span class="n">POSINFL</span><span class="p">,</span><span class="n">Y</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">getInflectionPoints</span><span class="p">(</span><span class="n">smoo</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">sign</span> <span class="o">=</span> <span class="s">&#39;positive&#39;</span><span class="p">)</span>
+            
+            <span class="c"># Convert all lists into numpy ndarrays, which make it easier to use these</span>
+            <span class="c"># values in the future</span>
+            <span class="n">PEAKS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">PEAKS</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="n">VALLEYS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">VALLEYS</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="n">NEGINFL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">NEGINFL</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="n">POSINFL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">POSINFL</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            
+            <span class="c"># Assemble the subdictionary for this region and add it to the regions </span>
+            <span class="c"># dictionary. </span>
+            <span class="n">regions</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&#39;RegMask&#39;</span><span class="p">:</span><span class="n">masks</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="s">&#39;GrayLevel&#39;</span><span class="p">:</span><span class="n">graylevels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="s">&#39;Histogram&#39;</span><span class="p">:</span><span class="n">histos</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="s">&#39;Max&#39;</span><span class="p">:</span><span class="n">MAX</span><span class="p">,</span><span class="s">&#39;Min&#39;</span><span class="p">:</span><span class="n">MIN</span><span class="p">,</span>
+            <span class="s">&#39;Mean&#39;</span><span class="p">:</span><span class="n">MEAN</span><span class="p">,</span><span class="s">&#39;MoPeak&#39;</span><span class="p">:</span><span class="n">MoPEAK</span><span class="p">,</span>
+            <span class="s">&#39;Peaks&#39;</span><span class="p">:</span><span class="n">PEAKS</span><span class="p">,</span><span class="s">&#39;Valleys&#39;</span><span class="p">:</span><span class="n">VALLEYS</span><span class="p">,</span>
+            <span class="s">&#39;NegInfl&#39;</span><span class="p">:</span><span class="n">NEGINFL</span><span class="p">,</span><span class="s">&#39;PosInfl&#39;</span><span class="p">:</span><span class="n">POSINFL</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># if no pixels are labeled as part of a particular region, the value of that </span>
+            <span class="c"># region in the regions dictionary is &#39;Null&#39;.</span>
+            <span class="n">regions</span><span class="p">[</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="s">&#39;Null&#39;</span>
+        
+    <span class="k">return</span> <span class="n">regions</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="applyPtThresh"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.applyPtThresh">[docs]</a><span class="k">def</span> <span class="nf">applyPtThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">PtThresh</span><span class="p">,</span> <span class="n">regionMask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies the platinum threshold to an image. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">PtMap</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">PtMap</span><span class="p">[</span><span class="n">Mask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>         <span class="c"># Apply the Mask. Masked areas are in white.</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">regionMask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">PtMap</span><span class="p">[</span><span class="n">regionMask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span> <span class="c"># Isolate the current region. Mask off rest in white</span>
+    <span class="n">PtMap</span> <span class="o">=</span> <span class="n">binops</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">PtMap</span><span class="p">,</span><span class="n">PtThresh</span><span class="p">)</span> <span class="c"># Apply the threshold</span>
+    
+    <span class="k">return</span> <span class="n">PtMap</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="applyDirtThresh"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.applyDirtThresh">[docs]</a><span class="k">def</span> <span class="nf">applyDirtThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">DirtThresh</span><span class="p">,</span> <span class="n">regionMask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">kernSize</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies the dirt threshold to an image and then performs a morphological </span>
+<span class="sd">    opening to the thresholded image. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">DirtMap</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>  <span class="c"># Make a copy of the original image</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">DirtMap</span><span class="p">[</span><span class="n">Mask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>         <span class="c"># Apply the Mask. Masked areas are in white.</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">regionMask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">DirtMap</span><span class="p">[</span><span class="n">regionMask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span> <span class="c"># Isolate the current region. Mask off rest in white</span>
+    <span class="n">DirtMap</span> <span class="o">=</span> <span class="n">binops</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">DirtMap</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">DirtThresh</span><span class="p">)</span> <span class="c"># Apply the threshold</span>
+    <span class="n">DirtKernel</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makeDiamondKernel</span><span class="p">(</span><span class="n">kernSize</span><span class="p">)</span> <span class="c"># Create morphological kernel</span>
+    <span class="n">DirtMap</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">DirtMap</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_OPEN</span><span class="p">,</span><span class="n">DirtKernel</span><span class="p">)</span> <span class="c"># Apply morph opening step</span>
+    <span class="k">return</span> <span class="n">DirtMap</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getMolyMap"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.getMolyMap">[docs]</a><span class="k">def</span> <span class="nf">getMolyMap</span><span class="p">(</span><span class="n">DirtMap</span><span class="p">,</span> <span class="n">PtMap</span><span class="p">,</span> <span class="n">regionMask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gets the map of the molybdenum given designated masks of the Dirt, Platinum,</span>
+<span class="sd">    region, and Mask. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MolyMap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">DirtMap</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">MolyMap</span><span class="p">[</span><span class="n">DirtMap</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">MolyMap</span><span class="p">[</span><span class="n">PtMap</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">MolyMap</span><span class="p">[</span><span class="n">Mask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>         <span class="c"># Apply the Mask. Masked areas are in white.</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">regionMask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">MolyMap</span><span class="p">[</span><span class="n">regionMask</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span> <span class="c"># Isolate the current region. Mask off rest in white    </span>
+    <span class="k">return</span> <span class="n">MolyMap</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getMasksFromPoster"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.getMasksFromPoster">[docs]</a><span class="k">def</span> <span class="nf">getMasksFromPoster</span><span class="p">(</span><span class="n">poster</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Receives a poster of an imagea and returns a list of images in which pixels </span>
+<span class="sd">    in the region have a value of 1 and pixels not in the region have a value of</span>
+<span class="sd">    0. The exception is the &#39;blk&#39; region, which is reversed. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Create the images</span>
+    <span class="n">blk</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">pleat</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">darkMo</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">Mo</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">highEx</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">Plat</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c"># isolate various sections</span>
+    <span class="n">blk</span><span class="p">[</span><span class="n">blk</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+    <span class="n">pleat</span><span class="p">[</span><span class="n">pleat</span><span class="o">!=</span><span class="mi">50</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">darkMo</span><span class="p">[</span><span class="n">darkMo</span><span class="o">!=</span><span class="mi">85</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">Mo</span><span class="p">[</span><span class="n">Mo</span><span class="o">!=</span><span class="mi">150</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">highEx</span><span class="p">[</span><span class="n">highEx</span><span class="o">!=</span><span class="mi">200</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">Plat</span><span class="p">[</span><span class="n">Plat</span><span class="o">!=</span><span class="mi">255</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="c"># Make masks of the regions where</span>
+    <span class="n">pleatMask</span> <span class="o">=</span> <span class="n">pleat</span><span class="o">/</span><span class="mi">50</span>
+    <span class="n">darkMoMask</span> <span class="o">=</span> <span class="n">darkMo</span><span class="o">/</span><span class="mi">85</span>
+    <span class="n">MoMask</span> <span class="o">=</span> <span class="n">Mo</span><span class="o">/</span><span class="mi">150</span>
+    <span class="n">highExMask</span> <span class="o">=</span> <span class="n">highEx</span><span class="o">/</span><span class="mi">200</span>
+    <span class="n">PlatMask</span> <span class="o">=</span> <span class="n">Plat</span><span class="o">/</span><span class="mi">255</span>
+
+    <span class="n">masks</span> <span class="o">=</span> <span class="p">[</span><span class="n">blk</span><span class="p">,</span><span class="n">pleatMask</span><span class="p">,</span><span class="n">darkMoMask</span><span class="p">,</span><span class="n">MoMask</span><span class="p">,</span><span class="n">highExMask</span><span class="p">,</span><span class="n">PlatMask</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">masks</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="bigMaskEdges"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.bigMaskEdges">[docs]</a><span class="k">def</span> <span class="nf">bigMaskEdges</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">res</span><span class="p">,</span> <span class="n">maxFeatureSize</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Bkgrdthreshold</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a mask for masking off the edges of a large foil scan.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - image - image to be masked</span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - maxFeatureSize - largest feature diameter not considered to be the </span>
+<span class="sd">            edge of the foil. Default set to 10000 microns. </span>
+<span class="sd">         - threshold - approximate maximum value of the background</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># want to reduce image to an image with a height of 1 mm</span>
+    <span class="n">rszheight</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1000</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">res</span><span class="p">))</span> 
+    
+    <span class="n">rszfactor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rszheight</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">resized</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">rszfactor</span><span class="p">,</span> <span class="n">interp</span><span class="o">=</span><span class="s">&#39;bilinear&#39;</span><span class="p">)</span>
+    <span class="n">scaledMaxFeat</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">rszfactor</span><span class="o">*</span><span class="n">maxFeatureSize</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">res</span><span class="p">))</span>
+    <span class="n">threshed</span> <span class="o">=</span> <span class="n">resized</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">threshed</span><span class="p">[</span><span class="n">threshed</span><span class="o">&lt;=</span><span class="n">Bkgrdthreshold</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">threshed</span><span class="p">[</span><span class="n">threshed</span><span class="o">&gt;</span><span class="n">Bkgrdthreshold</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Resize height: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rszheight</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Resize factor: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rszfactor</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Resize shape: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">resized</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Kernel width: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaledMaxFeat</span><span class="p">)</span>
+
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">scaledMaxFeat</span><span class="p">,</span><span class="n">scaledMaxFeat</span><span class="p">))</span>
+    <span class="n">removeDirt</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_CLOSE</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">floodSeed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">removeDirt</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span>
+    <span class="n">floodSeed</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="bp">False</span>
+    <span class="n">Edgeonly</span> <span class="o">=</span> <span class="n">binops</span><span class="o">.</span><span class="n">floodBySeed</span><span class="p">(</span><span class="n">removeDirt</span><span class="p">,</span><span class="n">floodSeed</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">growthMin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">growthMax</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="n">Edgeonly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">Edgeonly</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="c">#Edgeonly = cv2.morphologyEx(threshed, cv2.MORPH_OPEN, kernel, iterations=1)</span>
+    <span class="n">kernel2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">scaledMaxFeat</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="n">scaledMaxFeat</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">Edgeonly</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">Edgeonly</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_ERODE</span><span class="p">,</span> <span class="n">kernel2</span><span class="p">)</span>
+    <span class="n">EdgeMask</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">Edgeonly</span><span class="p">,</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bilinear&#39;</span><span class="p">)</span>
+    <span class="c">#EdgeMask=EdgeMask.astype(image.dtype)</span>
+    <span class="k">return</span> <span class="n">EdgeMask</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="FilterFeatures"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.mainanalysis.FilterFeatures">[docs]</a><span class="k">def</span> <span class="nf">FilterFeatures</span><span class="p">(</span><span class="n">sectData</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FilterFeatures makes sure that any features (i.e. a Peak, an inflection point,</span>
+<span class="sd">    or a valley) in an image Histogram that are identified by a function are not </span>
+<span class="sd">    greater than the maximum pixel value or less than the minimum pixel value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># statFeats are integers or single values, listFeats are feats that are lists</span>
+    <span class="n">statFeats</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">sectData</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;Max&#39;</span><span class="p">,</span><span class="s">&#39;Min&#39;</span><span class="p">,</span><span class="s">&#39;Mean&#39;</span><span class="p">,</span><span class="s">&#39;MoPeak&#39;</span><span class="p">]}</span>
+    <span class="n">listFeats</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">sectData</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;Peaks&#39;</span><span class="p">,</span><span class="s">&#39;NegInfl&#39;</span><span class="p">,</span><span class="s">&#39;PosInfl&#39;</span><span class="p">,</span><span class="s">&#39;Valleys&#39;</span><span class="p">]}</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">listFeats</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">listFeats</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="c"># if one of the features is greater than the Maximum or less than</span>
+            <span class="c"># the Minimum, eliminate that feature.</span>
+            <span class="k">if</span> <span class="n">statFeats</span><span class="p">[</span><span class="s">&#39;Max&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="n">statFeats</span><span class="p">[</span><span class="s">&#39;Max&#39;</span><span class="p">]:</span>
+                <span class="n">listFeats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">=</span><span class="n">listFeats</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">listFeats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">!=</span><span class="n">j</span><span class="p">]</span>
+                
+    <span class="n">statFeats</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">listFeats</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">sectData</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">ret</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">statFeats</span><span class="p">)</span><span class="c">#&lt;-------------------------#####################</span>
+    <span class="k">return</span> <span class="n">ret</span>
+    
+
+    </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

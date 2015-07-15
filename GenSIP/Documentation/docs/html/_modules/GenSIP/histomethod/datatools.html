@@ -1,0 +1,306 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.histomethod.datatools &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.histomethod.datatools</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">Contains all the functions used by Histograms to analyze data on the plots. </span>
+<span class="sd">Unlike the histogram_tools module, this module has no functions specific only to</span>
+<span class="sd">GenSIP data formats. </span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">copysign</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+    
+<div class="viewcode-block" id="easyThresh"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.easyThresh">[docs]</a><span class="k">def</span> <span class="nf">easyThresh</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">MIN</span><span class="p">,</span><span class="n">MAX</span><span class="p">,</span><span class="n">Binary</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Does exactly the same thing as the threshold function, it just does it in </span>
+<span class="sd">    fewer lines of code, and doesn&#39;t have a Boolean option right now. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="n">MIN</span><span class="o">&lt;=</span><span class="n">img</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">img</span><span class="o">&lt;=</span><span class="n">MAX</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Binary</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ret</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">img</span><span class="p">[</span><span class="n">ret</span><span class="p">]</span>
+        
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+        </div>
+<div class="viewcode-block" id="atFWHM"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.atFWHM">[docs]</a><span class="k">def</span> <span class="nf">atFWHM</span><span class="p">(</span><span class="n">histo</span><span class="p">,</span> <span class="n">peakVal</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the color indices at the full-width-half-maximum of a given peak</span>
+<span class="sd">    on a histogram. Does not subtract the backround.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MAX</span> <span class="o">=</span> <span class="n">histo</span><span class="p">[</span><span class="n">peakVal</span><span class="p">]</span>
+    <span class="n">HalfMax</span> <span class="o">=</span> <span class="n">MAX</span><span class="o">/</span><span class="mi">2</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">histo</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">colors</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">histo</span><span class="o">.</span><span class="n">size</span><span class="o">-</span><span class="n">peakVal</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="n">histo</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="n">HalfMax</span><span class="p">:</span>
+            <span class="n">HM1</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">HM1</span><span class="o">=</span><span class="bp">None</span>
+        <span class="c">#raise Exception(&quot;No first half-maximum.&quot;)</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">colors</span><span class="p">[</span><span class="n">peakVal</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="n">histo</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="n">HalfMax</span><span class="p">:</span>
+            <span class="n">HM2</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">HM2</span><span class="o">=</span><span class="bp">None</span>
+        <span class="c">#raise Exception(&quot;No second half-maximum.&quot;)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">HM1</span><span class="p">,</span><span class="n">HM2</span><span class="p">)</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="nsmooth"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.nsmooth">[docs]</a><span class="k">def</span> <span class="nf">nsmooth</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs smoothed over an array i times with a range n over which the running </span>
+<span class="sd">    mean is taken. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">I</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">smoothed</span><span class="p">(</span><span class="n">ret</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+         
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+ </div>
+<div class="viewcode-block" id="smoothed"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.smoothed">[docs]</a><span class="k">def</span> <span class="nf">smoothed</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wraps moving average in such a way that it returns an array of the same size</span>
+<span class="sd">    as the input array. </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">         - a - a numpy nd array</span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - n - the number of points over which the average is calculated</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mA</span> <span class="o">=</span> <span class="n">movingAverage</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">ret</span><span class="p">[</span><span class="mi">255</span><span class="p">]</span><span class="o">=</span><span class="n">a</span><span class="p">[</span><span class="mi">255</span><span class="p">]</span>
+    <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">255</span><span class="p">]</span><span class="o">=</span><span class="n">mA</span><span class="p">[:]</span>
+    <span class="k">return</span> <span class="n">ret</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+ </div>
+<div class="viewcode-block" id="movingAverage"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.movingAverage">[docs]</a><span class="k">def</span> <span class="nf">movingAverage</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the moving average at each point for an array of data and returns</span>
+<span class="sd">    an array of the moving Averages. The length of that array is the length of the</span>
+<span class="sd">    original array minus 2. </span>
+<span class="sd">    Arguments:</span>
+<span class="sd">         - a - a numpy nd array</span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - n - the number of points over which the floating average is calculated</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">ret</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span><span class="o">-</span><span class="n">ret</span><span class="p">[:</span><span class="o">-</span><span class="n">n</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">ret</span><span class="p">[</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">:]</span><span class="o">/</span><span class="n">n</span>
+
+<span class="c">##################################################################################</span>
+
+<span class="c">###################################################################################</span>
+    </div>
+<div class="viewcode-block" id="runningMeanFast"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.runningMeanFast">[docs]</a><span class="k">def</span> <span class="nf">runningMeanFast</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Another running mean function</span>
+<span class="sd">        Arguments:</span>
+<span class="sd">         - x - a numpy nd array</span>
+<span class="sd">         - N - the number of points over which the floating average is calculated</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">N</span><span class="p">,))</span><span class="o">/</span><span class="n">N</span><span class="p">)[(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">):]</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getMaxima"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.getMaxima">[docs]</a><span class="k">def</span> <span class="nf">getMaxima</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns all of the local maxima in a plot by first smoothing it 4 times </span>
+<span class="sd">    with a running mean and then looking for local maxima.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">smoo</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">smoonum</span><span class="p">):</span>
+        <span class="n">smoo</span> <span class="o">=</span> <span class="n">smoothed</span><span class="p">(</span><span class="n">smoo</span><span class="p">)</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">smoo</span><span class="p">)</span>
+    <span class="n">Zx</span><span class="p">,</span><span class="n">Zy</span> <span class="o">=</span> <span class="n">getZeroes</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="n">concav</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="n">retX</span><span class="p">,</span><span class="n">retY</span> <span class="o">=</span> <span class="p">[],[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">Zx</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">concav</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">retX</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">retY</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">retX</span><span class="p">,</span><span class="n">retY</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getMinima"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.getMinima">[docs]</a><span class="k">def</span> <span class="nf">getMinima</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns all of the local minima in a plot by first smoothing it 4 times </span>
+<span class="sd">    with a running mean and then looking for local minima.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">smoo</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">smoonum</span><span class="p">):</span>
+        <span class="n">smoo</span> <span class="o">=</span> <span class="n">smoothed</span><span class="p">(</span><span class="n">smoo</span><span class="p">)</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">smoo</span><span class="p">)</span>
+    <span class="n">Zx</span><span class="p">,</span><span class="n">Zy</span> <span class="o">=</span> <span class="n">getZeroes</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="n">concav</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="n">retX</span><span class="p">,</span><span class="n">retY</span> <span class="o">=</span> <span class="p">[],[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">Zx</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">concav</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">retX</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">retY</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">retX</span><span class="p">,</span><span class="n">retY</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+    </div>
+<div class="viewcode-block" id="getInflectionPoints"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.getInflectionPoints">[docs]</a><span class="k">def</span> <span class="nf">getInflectionPoints</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">smoonum</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">sign</span><span class="o">=</span><span class="s">&#39;negative&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns all of the negative or positive inflection points in a plot by first</span>
+<span class="sd">    smoothing it 4 times with a running mean and then looking for points where </span>
+<span class="sd">    the second gradient is zero and the first gradient is either postive or negative.</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        a - an array of numbers</span>
+<span class="sd">    Key-Word Arguments (kwargs):</span>
+<span class="sd">        smoonum = 4 - number of times to smooth the array to remove noise. Default</span>
+<span class="sd">            set to 4. </span>
+<span class="sd">        sign = &#39;negative&#39; - specifies whether to look for positive or negative </span>
+<span class="sd">            inflection points. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">smoo</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">smoonum</span><span class="p">):</span>
+        <span class="n">smoo</span> <span class="o">=</span> <span class="n">smoothed</span><span class="p">(</span><span class="n">smoo</span><span class="p">)</span>
+    <span class="n">concav</span> <span class="o">=</span> <span class="mi">10</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">smoo</span><span class="p">))</span>
+    <span class="n">Zx</span><span class="p">,</span><span class="n">Zy</span> <span class="o">=</span> <span class="n">getZeroes</span><span class="p">(</span><span class="n">concav</span><span class="p">)</span>
+    <span class="n">aberr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">concav</span><span class="p">)</span>
+    <span class="n">retX</span><span class="p">,</span><span class="n">retY</span> <span class="o">=</span> <span class="p">[],[]</span>
+
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">Zx</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sign</span><span class="o">==</span><span class="s">&#39;negative&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">aberr</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">retX</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="n">retY</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">sign</span><span class="o">==</span><span class="s">&#39;positive&#39;</span><span class="p">:</span>
+             <span class="k">if</span> <span class="n">aberr</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">retX</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="n">retY</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">retX</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">retY</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">retX</span><span class="p">,</span><span class="n">retY</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="getZeroes"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.datatools.getZeroes">[docs]</a><span class="k">def</span> <span class="nf">getZeroes</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the index of the points at which an array crosses zero given the array&quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="p">[],[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">copysign</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span><span class="o">!=</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span>
+                     </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

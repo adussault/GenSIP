@@ -1,0 +1,46 @@
+GenSIP.cleantests package
+=========================
+
+Submodules
+----------
+
+GenSIP.cleantests.calibrate module
+----------------------------------
+
+.. automodule:: GenSIP.cleantests.calibrate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.cleantests.dirt module
+-----------------------------
+
+.. automodule:: GenSIP.cleantests.dirt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.cleantests.moly module
+-----------------------------
+
+.. automodule:: GenSIP.cleantests.moly
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.cleantests.tests_cleantests module
+-----------------------------------------
+
+.. automodule:: GenSIP.cleantests.tests_cleantests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: GenSIP.cleantests
+    :members:
+    :undoc-members:
+    :show-inheritance:

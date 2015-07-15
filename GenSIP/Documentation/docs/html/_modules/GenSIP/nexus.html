@@ -1,0 +1,838 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.nexus &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.nexus</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains generic image analysis functions that put the various methods in GenSIP</span>
+<span class="sd">together under one roof.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">GenSIP.measure</span> <span class="kn">as</span> <span class="nn">meas</span>
+<span class="kn">import</span> <span class="nn">GenSIP.gencsv</span> <span class="kn">as</span> <span class="nn">gencsv</span>
+<span class="kn">import</span> <span class="nn">GenSIP.histomethod.display</span> <span class="kn">as</span> <span class="nn">dis</span>
+
+<span class="kn">from</span> <span class="nn">GenSIP.cleantests.moly</span> <span class="kn">import</span> <span class="n">Monalysis</span>
+<span class="kn">from</span> <span class="nn">GenSIP.cleantests.dirt</span> <span class="kn">import</span> <span class="n">dirtnalysis</span>
+<span class="kn">from</span> <span class="nn">GenSIP.bigscans.bigfoils</span> <span class="kn">import</span> <span class="n">ImgAnalysis</span>
+<span class="kn">from</span> <span class="nn">GenSIP.histomethod.mainanalysis</span> <span class="kn">import</span> <span class="n">analyzeByHisto</span>
+
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+
+<div class="viewcode-block" id="analyzImgOrFolder"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.analyzImgOrFolder">[docs]</a><span class="k">def</span> <span class="nf">analyzImgOrFolder</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s">&quot;cleantests&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyze Image or Folder (analyzImgOrFolder)</span>
+<span class="sd">    </span>
+<span class="sd">    Receives a path to an image or a folder of images and saves the output csv</span>
+<span class="sd">    file and pictures to a folder in the Output/ directory. </span>
+<span class="sd">    </span>
+<span class="sd">    ARGUMENTS:</span>
+<span class="sd">        - path - path to the folder or image to be analyzed</span>
+<span class="sd">        - res - resolution of the image, in microns^2/pixel area</span>
+<span class="sd">        </span>
+<span class="sd">    KEY-WORD ARGUMENTS:</span>
+<span class="sd">        - method =  &quot;cleantests&quot; - the method to use to analyze the image.</span>
+<span class="sd">                    Can be one of the following:</span>
+<span class="sd">                        cleantests - method used by cleantests.dirt and moly</span>
+<span class="sd">                        bigfoils - method used by bigscans.bigfoils</span>
+<span class="sd">                        histogram - new method developed that automatically assigns</span>
+<span class="sd">                            threshold values based on the histogram of the image.</span>
+<span class="sd">                            Currently analyzImgOrFolder is the most refined means</span>
+<span class="sd">                            of using the histogram module. </span>
+<span class="sd">                        standards - this method works by accessing the manually </span>
+<span class="sd">                            thresholded images stored in standards/all_dirt/ and </span>
+<span class="sd">                            standards/all_plat/ inside the current working </span>
+<span class="sd">                            directory, and calculates the platinum or dirt data</span>
+<span class="sd">                            directly from those thresholded images. The path variable </span>
+<span class="sd">                            must be a folder of the standard images. </span>
+<span class="sd">        - MoDirt = &#39;Mo&#39; - option to do molybdenum or dirt analysis</span>
+<span class="sd">        - Mask = 0 - option to include a path string to either a single mask (in </span>
+<span class="sd">                    the case that the path variable links to a single image) or </span>
+<span class="sd">                    a folder of masks with the same name as the image they corre-</span>
+<span class="sd">                    spond to. i.e. the image is &quot;Images/sub_img_004_003.png&quot; and the </span>
+<span class="sd">                    mask is at &quot;masks/sub_img_004_003.png&quot;</span>
+<span class="sd">        - genPoster = False - Option to generate a folder of poster images in the</span>
+<span class="sd">                    the output folder.</span>
+<span class="sd">        - autoMaskEdges = False - allows the bigfoil and histogram methods to work</span>
+<span class="sd">                    with individual foils like the cleantest method by automatically </span>
+<span class="sd">                    masking off the dark background around the foil.If this option</span>
+<span class="sd">                    is set to True, then any input for the Mask variable is over</span>
+<span class="sd">                    -ridden.</span>
+<span class="sd">        - stdDir = &quot;standards/&quot; - sets the directory containing the standards in</span>
+<span class="sd">                    the &quot;all_stds/&quot;, &quot;all_plat/&quot;, &quot;all_dirt/&quot; and &quot;all_masks&quot; directories.</span>
+<span class="sd">        - verbose = False - makes the function verbose.</span>
+<span class="sd">        - compToStds = False - Currently not used for anything. Would like to </span>
+<span class="sd">                    turn this option into a means of directly comparing the </span>
+<span class="sd">                    results of one method to the standard results</span>
+<span class="sd">        - retDataAndPicts = False - returns the Data and Pictures instead of </span>
+<span class="sd">                    writing them to image and CSV files. </span>
+
+<span class="sd">    EXAMPLE:</span>
+<span class="sd">        &gt; analyzImgOrFolder (&quot;InputPicts/Folder/&quot;,16,MoDirt=&#39;mo&#39;,method=&#39;cleantests&#39;)</span>
+<span class="sd">    Will run the cleantest analysis on all images in &quot;InputPicts/Folder/&quot; and </span>
+<span class="sd">    will save all the output to a folder &quot;Output/Output_Folder_cleantests/&quot;. </span>
+<span class="sd">    The contents of this folder are:</span>
+<span class="sd">        - PtMaps/ - a folder of the thresholded images of exposed platinum</span>
+<span class="sd">        - Mo_output_Folder.csv - a CSV file that contains the molybdenum analysis data</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MoDirt</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;MoDirt&#39;</span><span class="p">,</span> <span class="s">&#39;Mo&#39;</span><span class="p">)</span>
+    <span class="n">Mask</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Mask&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">genPoster</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;genPoster&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="c"># compareToStds = kwargs.get(&#39;compToStds&#39;,False)</span>
+    <span class="n">verbose</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;verbose&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">autoMask</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;autoMaskEdges&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">stdDir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stdDir&#39;</span><span class="p">,</span> <span class="s">&#39;standards/&#39;</span><span class="p">)</span>
+    <span class="n">retDataAndPicts</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;retDataAndPicts&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+    
+    <span class="c"># Standardize MoDirt to &#39;mo&#39; or &#39;dirt&#39; using checkMoDirt</span>
+    <span class="n">MoDirt</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+    
+    <span class="n">filetypes</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;.tif&#39;</span><span class="p">,</span> <span class="s">&#39;.jpg&#39;</span><span class="p">,</span> <span class="s">&#39;.jpeg&#39;</span><span class="p">,</span><span class="s">&#39;.tiff&#39;</span><span class="p">]</span>
+    
+    <span class="c"># Standardize the path string, and extract the name of the folder or image </span>
+    <span class="c"># file depending on whether the path is the path to a directory or image. </span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">filetypes</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">!=</span><span class="nb">str</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Path must be a string: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Invalid path name: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+        
+    <span class="c"># Generate output folders</span>
+    <span class="n">outFolder</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;outDir&#39;</span><span class="p">,</span><span class="s">&quot;Output/Output_&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;_&#39;</span><span class="o">+</span><span class="n">method</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span> <span class="n">posterFolder</span> <span class="o">=</span> <span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/PosterMaps/&#39;</span>
+    
+    <span class="k">if</span> <span class="n">MoDirt</span> <span class="o">==</span> <span class="s">&#39;mo&#39;</span><span class="p">:</span>
+        <span class="n">mapFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&#39;PtMaps/&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mapFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&#39;DirtMaps/&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">retDataAndPicts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mapFolder</span><span class="p">):</span> <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">mapFolder</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mapFolder</span><span class="p">):</span> <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">mapFolder</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">genPoster</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">posterFolder</span><span class="p">):</span> <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">posterFolder</span><span class="p">)</span>
+    
+    <span class="c"># Verbose Feedback:</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span> <span class="n">foo</span> <span class="o">=</span> <span class="s">&quot;directory&quot;</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">foo</span> <span class="o">=</span> <span class="s">&quot;image&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;––––––––––––NEXUS analyzImgOrFolder––––––––––––––&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;Now Running &quot;</span> <span class="o">+</span> <span class="n">MoDirt</span> <span class="o">+</span> <span class="s">&quot; testing using the &quot;</span> <span class="o">+</span> <span class="n">method</span> <span class="o">+</span> <span class="s">&quot; method&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;On &quot;</span><span class="o">+</span><span class="n">foo</span><span class="o">+</span><span class="s">&quot;: &#39;&quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;&#39;:&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;  Resolution set to: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;  Mask set to: &quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;  autoMaskEdges set to: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">autoMask</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;standards&#39;</span><span class="p">,</span><span class="s">&#39;standard&#39;</span><span class="p">,</span><span class="s">&#39;std&#39;</span><span class="p">,</span><span class="s">&#39;stds&#39;</span><span class="p">]:</span>
+            <span class="k">print</span> <span class="s">&quot;  Standard Directory: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">stdDir</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;- - - - - - - - - - - - - - - - - - - - - - - - - - - -&quot;</span>
+    <span class="c">#--------------#</span>
+    <span class="c"># Debug switch #</span>
+    <span class="n">debug</span> <span class="o">=</span> <span class="mi">0</span>      <span class="c">#</span>
+    <span class="c">#--------------#</span>
+    <span class="sd">&quot;&quot;&quot;Create Data Dictionary&quot;&quot;&quot;</span>
+    <span class="c"># Iterate through the images within a folder if the path is to a directory, </span>
+    <span class="c"># and run analyzeImg on each of image, then write the results to the Data </span>
+    <span class="c"># Dictionary. </span>
+    <span class="n">Data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">retDataAndPicts</span><span class="p">:</span> <span class="n">PictData</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># OPERATE ON FOLDER OF IMAGES ==============================================</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        
+        <span class="c"># Get list of images in directory</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">filetypes</span><span class="p">]</span>
+        <span class="c"># Create paths to those images</span>
+        <span class="n">imgPaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+        <span class="n">imgPaths</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">                                    &#39;Mask&#39; kwarg must be a path to a directory</span>
+<span class="s">                                    if the &#39;path&#39; variable is a path to a directory.&quot;</span>
+<span class="s">                                    &quot;&quot;&quot;</span>
+            <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">Mask</span><span class="p">),</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">                                        &#39;Mask&#39; kwarg must be a path to a directory</span>
+<span class="s">                                        if the &#39;path&#39; variable is a path to a directory.</span>
+<span class="s">                                        &quot;&quot;&quot;</span>
+            <span class="c"># Get list of images in directory</span>
+            <span class="n">masks</span>  <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">m</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">filetypes</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> 
+                <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">masks</span><span class="p">:</span> <span class="k">print</span> <span class="n">m</span>
+            <span class="c"># Create paths to those images</span>
+            <span class="n">maskPaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Mask</span><span class="p">,</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">masks</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> 
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">maskPaths</span><span class="p">)):</span> 
+                    <span class="k">print</span> <span class="n">maskPaths</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">maskPaths</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                    <span class="k">print</span> <span class="n">imgPaths</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">imgPaths</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="c"># I am assuming the mask name will be the same as the corresponding </span>
+            <span class="c"># name in the image folder, so when both are sorted, they should match. </span>
+            <span class="n">maskPaths</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span> 
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">maskPaths</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">imgPaths</span><span class="p">]</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)):</span>
+            <span class="c"># Make the mask image from the mask path</span>
+            <span class="k">if</span> <span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">maskPaths</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span> <span class="n">mask</span><span class="o">=</span><span class="mi">0</span>
+            <span class="n">imgName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">images</span><span class="p">[</span><span class="n">i</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># run analysis on the image</span>
+            <span class="n">statsDict</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">analyzeImage</span><span class="p">(</span><span class="n">imgPaths</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">res</span><span class="p">,</span> 
+                                            <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span> 
+                                            <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span><span class="n">autoMaskEdges</span><span class="o">=</span><span class="n">autoMask</span><span class="p">,</span>
+                                            <span class="n">stdDir</span><span class="o">=</span><span class="n">stdDir</span><span class="p">,</span> 
+                                            <span class="n">name</span><span class="o">=</span><span class="n">imgName</span><span class="p">,</span>
+                                            <span class="n">outDir</span><span class="o">=</span><span class="n">outFolder</span><span class="p">,</span>
+                                            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="c"># Assign to Data Dictionary</span>
+            <span class="n">Data</span><span class="p">[</span><span class="n">imgName</span><span class="p">]</span> <span class="o">=</span> <span class="n">statsDict</span>
+            <span class="p">(</span><span class="n">threshed</span><span class="p">,</span>
+             <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+            <span class="n">threshed</span> <span class="o">=</span> <span class="n">threshed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="n">threshed</span><span class="p">[</span><span class="n">threshed</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">retDataAndPicts</span><span class="p">:</span>
+                <span class="c"># Create the output images</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">mapFolder</span><span class="o">+</span><span class="n">imgName</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                            <span class="n">threshed</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+                    <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">posterFolder</span><span class="o">+</span><span class="n">imgName</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                                <span class="n">poster</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">PictData</span><span class="p">[</span><span class="n">imgName</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;threshed&quot;</span><span class="p">:</span><span class="n">threshed</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span> <span class="n">PictData</span><span class="p">[</span><span class="n">imgName</span><span class="p">][</span><span class="s">&quot;poster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">poster</span>
+                    
+                            
+    <span class="c"># OPERATE ON A SINGLE IMAGE ================================================</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># run analysis on the image</span>
+        <span class="k">if</span> <span class="n">Mask</span><span class="o">!=</span><span class="mi">0</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">Mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">mask</span><span class="o">=</span><span class="mi">0</span>
+        <span class="n">statsDict</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">analyzeImage</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                        <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span> 
+                                        <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span><span class="n">autoMaskEdges</span><span class="o">=</span><span class="n">autoMask</span><span class="p">,</span>
+                                        <span class="n">stdDir</span><span class="o">=</span><span class="n">stdDir</span><span class="p">,</span>
+                                        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> 
+                                        <span class="n">outDir</span><span class="o">=</span><span class="n">outFolder</span><span class="p">,</span>
+                                        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="n">Data</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">statsDict</span>
+        <span class="p">(</span><span class="n">threshed</span><span class="p">,</span>
+         <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+        <span class="n">threshed</span> <span class="o">=</span> <span class="n">threshed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">threshed</span><span class="p">[</span><span class="n">threshed</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+        <span class="n">poster</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">poster</span><span class="p">[</span><span class="n">poster</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">retDataAndPicts</span><span class="p">:</span>
+            <span class="c"># Create the output images</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">mapFolder</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                        <span class="n">threshed</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">posterFolder</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                            <span class="n">poster</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">PictData</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;threshed&quot;</span><span class="p">:</span><span class="n">threshed</span><span class="p">}</span>
+            <span class="k">if</span> <span class="n">genPoster</span><span class="p">:</span> <span class="n">PictData</span><span class="p">[</span><span class="n">imgName</span><span class="p">][</span><span class="s">&quot;poster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">poster</span>    
+            
+    <span class="k">if</span> <span class="n">retDataAndPicts</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Data</span><span class="p">,</span> <span class="n">PictData</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Write the output to a CSV file</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="n">MoDirt</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="o">+</span><span class="s">&#39;_ouput_&#39;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;.csv&#39;</span><span class="p">)</span>
+        <span class="n">CSV</span> <span class="o">=</span> <span class="n">gencsv</span><span class="o">.</span><span class="n">DataToCSV</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">name</span><span class="o">+</span><span class="s">&#39;: &#39;</span><span class="o">+</span><span class="n">method</span><span class="o">+</span><span class="s">&#39; method of analysis&#39;</span><span class="p">)</span>   
+        <span class="n">CSV</span><span class="o">.</span><span class="n">writeDataFromDict</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">FirstColHead</span><span class="o">=</span><span class="s">&#39;Image&#39;</span><span class="p">)</span>
+        <span class="n">CSV</span><span class="o">.</span><span class="n">closeCSVFile</span><span class="p">()</span> 
+    
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="analyzeImage"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.analyzeImage">[docs]</a><span class="k">def</span> <span class="nf">analyzeImage</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;cleantests&#39;</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;mo&#39;</span><span class="p">,</span> <span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> 
+                 <span class="n">autoMaskEdges</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given the path, runs analysis on a single image using one of the methods in</span>
+<span class="sd">    GenSIP specified by the &#39;method&#39; kwarg (currently: cleantests or bigfoils). </span>
+<span class="sd">    Returns a Data Dictionary and the thresholded image and poster.</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - path - path to the image to be analyzed</span>
+<span class="sd">        - res - resolution of the image, in microns^2/pixel area</span>
+<span class="sd">        </span>
+<span class="sd">    KEY-WORD ARGUMENTS:</span>
+<span class="sd">        - method =  &quot;cleantests&quot; - the method to use to analyze the image.</span>
+<span class="sd">                    Can be one of the following:</span>
+<span class="sd">                        cleantests - method used by cleantests.dirt and moly</span>
+<span class="sd">                        bigfoils - method used by bigscans.bigfoils</span>
+<span class="sd">                        histogram - new method developed that automatically assigns</span>
+<span class="sd">                            threshold values based on the histogram of the image.</span>
+<span class="sd">                            Currently analyzImgOrFolder is the most refined means</span>
+<span class="sd">                            of using the histogram module. </span>
+<span class="sd">                        standards - this method works by accessing the manually </span>
+<span class="sd">                            thresholded images stored in standards/all_dirt/ and </span>
+<span class="sd">                            standards/all_plat/ inside the current working </span>
+<span class="sd">                            directory, and calculates the platinum or dirt data</span>
+<span class="sd">                            directly from those thresholded images. The path variable </span>
+<span class="sd">                            must be a folder of the standard images. </span>
+<span class="sd">        - MoDirt = &#39;Mo&#39; - option to do molybdenum or dirt analysis</span>
+<span class="sd">        - Mask = 0 - option to include a path string to either a single mask (in </span>
+<span class="sd">                    the case that the path variable links to a single image) or </span>
+<span class="sd">                    a folder of masks with the same name as the image they corre-</span>
+<span class="sd">                    spond to. i.e. the image is &quot;Images/sub_img_004_003.png&quot; and the </span>
+<span class="sd">                    mask is at &quot;masks/sub_img_004_003.png&quot;</span>
+<span class="sd">        - autoMaskEdges = False - allows the bigfoil and histogram methods to work</span>
+<span class="sd">                    with individual foils like the cleantest method by automatically </span>
+<span class="sd">                    masking off the dark background around the foil.If this option</span>
+<span class="sd">                    is set to True, then any input for the Mask variable is over</span>
+<span class="sd">                    -ridden.</span>
+<span class="sd">        - stdDir = &quot;standards/&quot; - sets the directory containing the standards in</span>
+<span class="sd">                    the &quot;all_stds/&quot;, &quot;all_plat/&quot;, &quot;all_dirt/&quot; and &quot;all_masks&quot; directories.</span>
+<span class="sd">        - name = &#39;&#39; - name of the image. Used when making the histogram image for</span>
+<span class="sd">                    the histogram method. </span>
+<span class="sd">        - outDir = &quot;Output/&quot; - specifies the directory to output. Used when making</span>
+<span class="sd">                    the histogram image for the histogram method. </span>
+<span class="sd">        - verbose = False - makes the function verbose.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># The rest of the key-word arguments</span>
+    <span class="n">stdDir</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stdDir&#39;</span><span class="p">,</span><span class="s">&#39;standards/&#39;</span><span class="p">)</span>
+    <span class="n">name</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">outDir</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;outDir&#39;</span><span class="p">,</span><span class="s">&quot;Output/&quot;</span><span class="p">)</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;verbose&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    
+    
+    <span class="n">img</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">MoDirt</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">int</span><span class="p">,</span><span class="nb">float</span><span class="p">]</span> <span class="ow">and</span> <span class="n">Mask</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">Mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">Mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">MaskDims</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Mask</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">ImgDims</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">MaskDims</span> <span class="o">=</span> <span class="s">&#39;--&#39;</span>
+            <span class="n">ImgDims</span> <span class="o">=</span> <span class="s">&#39;--&#39;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span> <span class="p">(</span><span class="s">&quot;&quot;&quot;There is a problem with the mask: </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                            Mask type: {0} </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                            Mask shape: {1} </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                            Image shape: {2}&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)),</span><span class="n">MaskDims</span><span class="p">,</span><span class="n">ImgDims</span><span class="p">))</span>
+    <span class="c"># Uses my OLD maskEdges function to mask off the dark area around a foil if </span>
+    <span class="c"># specified. </span>
+    <span class="k">if</span> <span class="n">autoMaskEdges</span><span class="p">:</span>
+        <span class="n">maskedImg</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">maskEdge</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+
+    <span class="c"># Verbose Feedback</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Now analyzing Image at:&quot;</span>
+        <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">retData</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c"># MOLYBDENUM ANALYSIS ======================================================</span>
+    <span class="k">if</span> <span class="n">MoDirt</span> <span class="o">==</span> <span class="s">&#39;mo&#39;</span><span class="p">:</span>
+        <span class="c"># Method used by cleantests  ––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;cleantests&#39;</span><span class="p">,</span><span class="s">&#39;smallfoils&#39;</span><span class="p">,</span> <span class="s">&#39;cleantest&#39;</span><span class="p">]:</span>
+            <span class="p">(</span><span class="n">PtArea</span><span class="p">,</span> 
+            <span class="n">FoilArea</span><span class="p">,</span> 
+            <span class="n">MolyArea</span><span class="p">,</span> 
+            <span class="n">MolyMass</span><span class="p">,</span> 
+            <span class="n">threshed</span><span class="p">)</span> <span class="o">=</span> <span class="n">Monalysis</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            
+            <span class="n">PercPt</span> <span class="o">=</span> <span class="mi">100</span><span class="o">*</span><span class="n">PtArea</span><span class="o">/</span><span class="n">FoilArea</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+        
+        <span class="c"># Method used by bigfoils  –––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;bigfoils&#39;</span><span class="p">,</span><span class="s">&#39;big&#39;</span><span class="p">,</span><span class="s">&#39;bigscans&#39;</span><span class="p">,</span><span class="s">&#39;no border&#39;</span><span class="p">]:</span>
+            <span class="n">stats</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">ImgAnalysis</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span><span class="n">returnSizes</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">PtArea</span><span class="p">,</span>
+            <span class="n">FoilArea</span><span class="p">,</span>
+            <span class="n">PercPt</span><span class="p">)</span> <span class="o">=</span> <span class="n">stats</span>
+            <span class="n">MolyArea</span> <span class="o">=</span> <span class="n">FoilArea</span><span class="o">-</span><span class="n">PtArea</span>
+            <span class="n">MolyMass</span> <span class="o">=</span> <span class="n">MolyArea</span><span class="o">*.</span><span class="mi">3</span><span class="o">*</span><span class="mf">10.2</span> <span class="c">#moly mass in micrograms</span>
+            <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+            
+        <span class="c"># Method Used by Histogram Analysis (newmethod) ––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;newmethod&#39;</span><span class="p">,</span> <span class="s">&#39;histograms&#39;</span><span class="p">,</span> <span class="s">&#39;histo&#39;</span><span class="p">,</span> <span class="s">&#39;histogram&#39;</span><span class="p">,</span> <span class="s">&#39;hist&#39;</span><span class="p">]:</span>
+            <span class="n">stats</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">analyzeByHisto</span> <span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                           <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                                           <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span> <span class="n">genPoster</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                           <span class="n">returnData</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">returnSizes</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">PtArea</span><span class="p">,</span>
+            <span class="n">PercPt</span><span class="p">,</span>
+            <span class="n">FoilArea</span><span class="p">,</span>
+            <span class="n">Data</span><span class="p">)</span> <span class="o">=</span> <span class="n">stats</span>
+            
+            <span class="n">dis</span><span class="o">.</span><span class="n">saveHist</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">outDir</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            
+            <span class="n">MolyArea</span> <span class="o">=</span> <span class="n">FoilArea</span><span class="o">-</span><span class="n">PtArea</span>
+            <span class="n">MolyMass</span> <span class="o">=</span> <span class="n">MolyArea</span><span class="o">*.</span><span class="mi">3</span><span class="o">*</span><span class="mf">10.2</span> <span class="c">#moly mass in micrograms</span>
+            
+            <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+            
+        <span class="c"># STANDARD ANALYSIS –––––––––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;standards&#39;</span><span class="p">,</span><span class="s">&#39;standard&#39;</span><span class="p">,</span><span class="s">&#39;std&#39;</span><span class="p">,</span><span class="s">&#39;stds&#39;</span><span class="p">]:</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">posterfy</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+            <span class="n">imgName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">PtMapPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span> <span class="s">&#39;all_plat/&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">imgName</span><span class="o">+</span><span class="s">&#39;.png&#39;</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">PtMapPath</span><span class="p">):</span>
+                <span class="n">threshed</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">PtMapPath</span><span class="p">)</span>
+                <span class="n">PtArea</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcExposedPt</span><span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="n">PixFoil</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span>
+                <span class="n">FoilArea</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">PixFoil</span><span class="o">*</span><span class="n">res</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                <span class="n">MolyArea</span> <span class="o">=</span> <span class="n">FoilArea</span><span class="o">-</span><span class="n">PtArea</span>
+                <span class="n">MolyMass</span> <span class="o">=</span> <span class="n">MolyArea</span><span class="o">*.</span><span class="mi">3</span><span class="o">*</span><span class="mf">10.2</span> <span class="c">#moly mass in micrograms</span>
+                <span class="k">if</span> <span class="n">FoilArea</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">PercPt</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">PercPt</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">PtArea</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">FoilArea</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;Not a standard: &quot;</span> <span class="o">+</span> <span class="n">imgName</span>
+                <span class="k">print</span> <span class="s">&quot;  File path does not Exist: &quot;</span> <span class="o">+</span> <span class="n">PtMapPath</span>
+                <span class="n">retData</span> <span class="o">=</span> <span class="n">blankDataDict</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+                <span class="n">threshed</span> <span class="o">=</span> <span class="n">blankImg</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">retData</span><span class="p">,</span> <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span>
+                
+        <span class="c"># UNMATCHED METHOD ––––––––––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;&quot;&quot;The specified method is not available: {0} </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                               Method should be one of the following: </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                               &#39;cleantests&#39;,&#39;bigfoils&#39;,&#39;histogram&#39;,&#39;standard&#39;.</span>
+<span class="s">                               &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">method</span><span class="p">)))</span>
+                            
+        <span class="c"># Prepare Return Data Dictionary ---------------------------------------</span>
+        <span class="n">retData</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Pt Area (mm^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">PtArea</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span>
+                    <span class="s">&#39;Foil Area (mm^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">FoilArea</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+                    <span class="s">&#39;Moly Area (mm^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">MolyArea</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span>
+                    <span class="s">&#39;Mass Molybdenum (micrograms)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">MolyMass</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span>
+                    <span class="s">&#39;</span><span class="si">% E</span><span class="s">xposed Pt&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">PercPt</span><span class="p">,</span><span class="mi">3</span><span class="p">)}</span>
+                    
+    <span class="c"># DIRT ANALYSIS ============================================================</span>
+    <span class="k">elif</span> <span class="n">MoDirt</span> <span class="o">==</span> <span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+        
+        <span class="c"># Method used by cleantests  ––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;cleantests&#39;</span><span class="p">,</span><span class="s">&#39;smallfoils&#39;</span><span class="p">,</span> <span class="s">&#39;cleantest&#39;</span><span class="p">,</span><span class="s">&#39;ct&#39;</span><span class="p">,</span><span class="s">&#39;foils&#39;</span><span class="p">]:</span>
+            <span class="p">(</span><span class="n">DirtNum</span><span class="p">,</span>
+             <span class="n">DirtArea</span><span class="p">,</span>
+             <span class="n">threshed</span><span class="p">,</span>
+             <span class="n">DirtSizes</span><span class="p">)</span> <span class="o">=</span> <span class="n">dirtnalysis</span> <span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                       <span class="n">MaskEdges</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                       <span class="n">retSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                       <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+                         
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+            
+        <span class="c"># Method used by bigfoils ––––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;bigfoils&#39;</span><span class="p">,</span><span class="s">&#39;big&#39;</span><span class="p">,</span><span class="s">&#39;bigscans&#39;</span><span class="p">,</span><span class="s">&#39;no border&#39;</span><span class="p">]:</span>
+            <span class="n">stats</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">ImgAnalysis</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                       <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span>
+                                       <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                       <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">DirtNum</span><span class="p">,</span>
+             <span class="n">DirtArea</span><span class="p">,</span>
+             <span class="n">AreaFoil</span><span class="p">,</span>
+             <span class="n">Perc</span><span class="p">,</span>
+             <span class="n">DirtSizes</span><span class="p">)</span> <span class="o">=</span> <span class="n">stats</span>
+                                     
+            <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+            
+        <span class="c"># Method Used by Histogram Analysis (newmethod) ––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;newmethod&#39;</span><span class="p">,</span> <span class="s">&#39;histograms&#39;</span><span class="p">,</span> <span class="s">&#39;histo&#39;</span><span class="p">,</span> <span class="s">&#39;histogram&#39;</span><span class="p">]:</span>
+            <span class="n">stats</span><span class="p">,</span> <span class="n">picts</span> <span class="o">=</span> <span class="n">analyzeByHisto</span> <span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                           <span class="n">Mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> 
+                                           <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+                                           <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span> 
+                                           <span class="n">genPoster</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                           <span class="n">returnData</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                           <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">DirtNum</span><span class="p">,</span>
+             <span class="n">DirtArea</span><span class="p">,</span>
+             <span class="n">DirtSizes</span><span class="p">,</span>
+             <span class="n">AreaFoil</span><span class="p">,</span>
+             <span class="n">Data</span><span class="p">)</span> <span class="o">=</span> <span class="n">stats</span>
+            
+            <span class="n">dis</span><span class="o">.</span><span class="n">saveHist</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span> <span class="n">outDir</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            
+            <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span> <span class="o">=</span> <span class="n">picts</span>
+            
+        <span class="c"># STANDARD ANALYSIS –––––––––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;standards&#39;</span><span class="p">,</span><span class="s">&#39;standard&#39;</span><span class="p">,</span><span class="s">&#39;std&#39;</span><span class="p">,</span><span class="s">&#39;stds&#39;</span><span class="p">]:</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">posterfy</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+            <span class="n">imgName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">DirtMapPath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span> <span class="s">&#39;all_dirt/&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">imgName</span><span class="o">+</span><span class="s">&#39;.png&#39;</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">DirtMapPath</span><span class="p">):</span>
+                <span class="n">threshed</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">DirtMapPath</span><span class="p">)</span>
+                <span class="p">(</span><span class="n">DirtArea</span><span class="p">,</span> 
+                <span class="n">DirtNum</span><span class="p">,</span>
+                <span class="n">DirtSizes</span><span class="p">,</span>
+                <span class="n">labeled</span><span class="p">)</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcDirt</span><span class="p">(</span><span class="n">threshed</span><span class="p">,</span>
+                                         <span class="n">res</span><span class="p">,</span> 
+                                         <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                         <span class="n">returnLabelled</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                         <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
+                                         
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;Not a standard: &quot;</span> <span class="o">+</span> <span class="n">imgName</span>
+                <span class="k">print</span> <span class="s">&quot;  File path does not Exist: &quot;</span> <span class="o">+</span> <span class="n">DirtMapPath</span>
+                <span class="n">retData</span> <span class="o">=</span> <span class="n">blankDataDict</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+                <span class="n">threshed</span> <span class="o">=</span> <span class="n">blankImg</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">retData</span><span class="p">,</span> <span class="p">(</span><span class="n">threshed</span><span class="p">,</span> <span class="n">poster</span><span class="p">)</span>
+                
+        <span class="c"># UNMATCHED METHOD ––––––––––––––––––––––––––––––––––––––––––––</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;&quot;&quot;The specified method is not available: {0} </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                               Method should be one of the following: </span><span class="se">\n</span><span class="s"></span>
+<span class="s">                               &#39;cleantests&#39;,&#39;bigfoils&#39;,&#39;histogram&#39;,&#39;standard&#39;.</span>
+<span class="s">                               &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">method</span><span class="p">)))</span>
+        
+        <span class="c"># Prepare Return Data Dictionary ---------------------------------------</span>
+        <span class="p">(</span><span class="n">MeanSize</span><span class="p">,</span> 
+        <span class="n">MaxSize</span><span class="p">,</span> 
+        <span class="n">percOver100</span><span class="p">)</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">getDirtSizeData</span><span class="p">(</span><span class="n">DirtSizes</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+        <span class="n">retData</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Dirt Count&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">DirtNum</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="s">&#39;Dirt Area (mm^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">DirtArea</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                    <span class="s">&#39;Mean Particle Area (micron^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">MeanSize</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="s">&#39;Max Particle Area (micron^2)&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">MaxSize</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="s">&#39;% Dirt Particles over 100micron diameter&#39;</span><span class="p">:</span><span class="n">ifFloatRound</span><span class="p">(</span><span class="n">percOver100</span><span class="p">,</span><span class="mi">3</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;- - - - - - - - - - - - - - - - - - - - - - - - - - - -&quot;</span>
+    
+    <span class="c"># Return results</span>
+    <span class="n">retPicts</span> <span class="o">=</span> <span class="p">(</span><span class="n">threshed</span><span class="p">,</span><span class="n">poster</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">retData</span><span class="p">,</span> <span class="n">retPicts</span>
+      
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="ifFloatRound"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.ifFloatRound">[docs]</a><span class="k">def</span> <span class="nf">ifFloatRound</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">rnd</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    If num is a float, returns num rounded by rnd digits.</span>
+<span class="sd">    Otherwise just return num. </span>
+<span class="sd">    Prevents errors by rounding strings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">long</span><span class="p">]:</span> <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="n">num</span><span class="p">,</span><span class="n">rnd</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">num</span>
+
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="blankDataDict"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.blankDataDict">[docs]</a><span class="k">def</span> <span class="nf">blankDataDict</span><span class="p">(</span><span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;mo&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a data dictionary of the format used in analyzImgOrFolder where all </span>
+<span class="sd">    of the data points are replaced with &quot;&#39;--&quot; as a filler.&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MoDirt</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MoDirt</span><span class="o">==</span><span class="s">&#39;mo&#39;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gives a blank moly data dictionary&quot;&quot;&quot;</span>
+        <span class="n">retData</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Pt Area (mm^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Foil Area (mm^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Moly Area (mm^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Mass Molybdenum (micrograms)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;</span><span class="si">% E</span><span class="s">xposed Pt&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">MoDirt</span><span class="o">==</span><span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gives a blank dirt data dictionary&quot;&quot;&quot;</span>
+        <span class="n">retData</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Dirt Count&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Dirt Area (mm^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Mean Particle Area (micron^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;Max Particle Area (micron^2)&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">,</span>
+                    <span class="s">&#39;% Dirt Particles over 100micron diameter&#39;</span><span class="p">:</span><span class="s">&quot;&#39;--&quot;</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">retData</span>
+
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="blankImg"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.blankImg">[docs]</a><span class="k">def</span> <span class="nf">blankImg</span><span class="p">(</span><span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a white image given the dimensions&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span><span class="o">*</span><span class="mi">255</span>
+            
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span></div>
+<div class="viewcode-block" id="makeStandardReport"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.makeStandardReport">[docs]</a><span class="k">def</span> <span class="nf">makeStandardReport</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">MoDirt</span> <span class="o">=</span> <span class="s">&quot;mo&quot;</span><span class="p">,</span> <span class="n">stdDir</span><span class="o">=</span><span class="s">&quot;standards/&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Given the resolution, creates a CSV file that compares each of the methods to</span>
+<span class="sd">    the standard method side-by-side. </span>
+<span class="sd">    Inputs</span>
+<span class="sd">        - res - resolution of the image, in microns^2/pixel area</span>
+<span class="sd">        </span>
+<span class="sd">    KEY-WORD ARGUMENTS:</span>
+<span class="sd">        - MoDirt = &#39;Mo&#39; - option to do molybdenum or dirt analysis</span>
+<span class="sd">        - stdDir = &quot;standards/&quot; - sets the directory containing the standards in</span>
+<span class="sd">                    the &quot;all_stds/&quot;, &quot;all_plat/&quot;, &quot;all_dirt/&quot; and &quot;all_masks&quot; directories.</span>
+<span class="sd">        - verbose = False - makes the function verbose.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MoDirt</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span>
+    <span class="n">METHODS</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Cleantests&quot;</span><span class="p">,</span><span class="s">&quot;Bigfoils&quot;</span><span class="p">,</span><span class="s">&quot;Histograms&quot;</span><span class="p">,</span><span class="s">&quot;Standard&quot;</span><span class="p">]</span>
+    <span class="n">all_stds</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span><span class="s">&quot;all_stds/&quot;</span><span class="p">)</span>
+    <span class="n">all_masks</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span><span class="s">&quot;all_masks/&quot;</span><span class="p">)</span>
+    <span class="n">all_dirt</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span> <span class="s">&quot;all_dirt/&quot;</span><span class="p">)</span>
+    <span class="n">all_plat</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stdDir</span><span class="p">,</span> <span class="s">&quot;all_plat/&quot;</span><span class="p">)</span>
+    <span class="n">dataDict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">retPicts</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">retDict</span> <span class="o">=</span> <span class="p">{}</span> <span class="c"># outpu dictionary to be written to CSV file</span>
+    <span class="n">outFolder</span> <span class="o">=</span> <span class="s">&quot;Output/Standard_Report_&quot;</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">fun</span><span class="o">.</span><span class="n">getDateString</span><span class="p">(</span><span class="n">minSep</span><span class="o">=</span><span class="s">&#39;_&#39;</span><span class="p">))</span><span class="o">+</span><span class="s">&quot;/&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outFolder</span><span class="p">):</span> <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outFolder</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MoDirt</span> <span class="o">==</span> <span class="s">&#39;mo&#39;</span><span class="p">:</span>
+        <span class="n">mapFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&#39;PtMaps/&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">MoDirt</span> <span class="o">==</span> <span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+        <span class="n">mapFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&#39;DirtMaps/&#39;</span><span class="p">)</span>
+    <span class="n">posterFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&#39;PosterMaps/&#39;</span><span class="p">)</span>
+    
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">mapFolder</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">posterFolder</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">METHODS</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">dataDict</span><span class="p">[</span><span class="n">method</span><span class="p">],</span>
+         <span class="n">retPicts</span><span class="p">[</span><span class="n">method</span><span class="p">])</span> <span class="o">=</span> <span class="n">analyzImgOrFolder</span><span class="p">(</span><span class="n">all_stds</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> 
+                                                 <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> 
+                                                 <span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span>
+                                                 <span class="n">Mask</span><span class="o">=</span><span class="n">all_masks</span><span class="p">,</span> 
+                                                 <span class="n">genPoster</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                                 <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> 
+                                                 <span class="n">autoMaskEdges</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> 
+                                                 <span class="n">stdDir</span><span class="o">=</span><span class="n">stdDir</span><span class="p">,</span> 
+                                                 <span class="n">outDir</span><span class="o">=</span><span class="n">outFolder</span><span class="p">,</span>
+                                                 <span class="n">retDataAndPicts</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">retPicts</span><span class="p">[</span><span class="n">method</span><span class="p">]:</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">mapFolder</span><span class="o">+</span><span class="n">img</span><span class="o">+</span><span class="s">&#39;_&#39;</span><span class="o">+</span><span class="n">method</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                        <span class="n">retPicts</span><span class="p">[</span><span class="n">method</span><span class="p">][</span><span class="n">img</span><span class="p">][</span><span class="s">&#39;threshed&#39;</span><span class="p">],</span> 
+                        <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">posterFolder</span><span class="o">+</span><span class="n">img</span><span class="o">+</span><span class="s">&#39;_&#39;</span><span class="o">+</span><span class="n">method</span><span class="o">+</span><span class="s">&#39;.png&#39;</span><span class="p">,</span>
+                        <span class="n">retPicts</span><span class="p">[</span><span class="n">method</span><span class="p">][</span><span class="n">img</span><span class="p">][</span><span class="s">&#39;poster&#39;</span><span class="p">],</span> 
+                        <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+        
+    <span class="c"># Reorganize </span>
+    <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">dataDict</span><span class="p">[</span><span class="s">&quot;Standard&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">dataDict</span><span class="p">[</span><span class="s">&quot;Standard&quot;</span><span class="p">][</span><span class="n">image</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">retDict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">image</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="s">&quot;Standard&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataDict</span><span class="p">[</span><span class="s">&quot;Standard&quot;</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span>
+    <span class="c"># Populate retDict and input ratio to standard output</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">retDict</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">METHODS</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">selfEntry</span> <span class="o">=</span> <span class="n">dataDict</span><span class="p">[</span><span class="n">method</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span>
+                <span class="n">stdEntry</span> <span class="o">=</span> <span class="n">dataDict</span><span class="p">[</span><span class="s">&#39;Standard&#39;</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="n">entry</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">stdEntry</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">long</span><span class="p">]</span> <span class="ow">and</span> <span class="n">stdEntry</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ratToStd</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">selfEntry</span><span class="p">)</span><span class="o">/</span><span class="n">stdEntry</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ratToStd</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">selfEntry</span>
+                <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">image</span><span class="p">][</span><span class="n">method</span><span class="o">+</span><span class="s">&quot; Error Ratio to Stnd&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ratToStd</span>
+        
+        <span class="n">Images</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Average Err Ratio&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Err Ratio StdDev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Average </span><span class="si">% E</span><span class="s">rror&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ErrRats</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">image</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&quot; Error Ratio to Stnd&quot;</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">errRat</span> <span class="ow">in</span> <span class="n">ErrRats</span><span class="p">:</span>
+            <span class="n">Rats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">Images</span><span class="p">),))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Images</span><span class="p">)):</span>
+                <span class="n">Rats</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="n">Images</span><span class="p">[</span><span class="n">i</span><span class="p">]][</span><span class="n">errRat</span><span class="p">]</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">errRat</span><span class="p">[:</span><span class="o">-</span><span class="mi">20</span><span class="p">]</span>
+            <span class="n">Ave</span> <span class="o">=</span> <span class="n">Rats</span><span class="p">[</span><span class="n">Rats</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">StdDev</span> <span class="o">=</span> <span class="n">Rats</span><span class="p">[</span><span class="n">Rats</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+            <span class="n">AvePercErr</span> <span class="o">=</span> <span class="p">(</span><span class="n">Ave</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span>
+
+            <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Average Err Ratio&quot;</span><span class="p">][</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">ifFloatRound</span><span class="p">(</span><span class="n">Ave</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Err Ratio StdDev&quot;</span><span class="p">][</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">ifFloatRound</span><span class="p">(</span><span class="n">StdDev</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">][</span><span class="s">&quot;Average </span><span class="si">% E</span><span class="s">rror&quot;</span><span class="p">][</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">ifFloatRound</span><span class="p">(</span><span class="n">AvePercErr</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+    
+    <span class="n">ColHeaders</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Image&quot;</span><span class="p">,</span> 
+                  <span class="s">&quot;Standard&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Cleantests&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Bigfoils&quot;</span><span class="p">,</span> 
+                  <span class="s">&quot;Histograms&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Bigfoils Error Ratio to Stnd&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Cleantests Error Ratio to Stnd&quot;</span><span class="p">,</span>
+                  <span class="s">&quot;Histograms Error Ratio to Stnd&quot;</span><span class="p">]</span>
+    <span class="n">Footer</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Average Err Ratio&quot;</span><span class="p">,</span> <span class="s">&quot;Err Ratio StdDev&quot;</span><span class="p">,</span> <span class="s">&quot;Average </span><span class="si">% E</span><span class="s">rror&quot;</span><span class="p">]</span>
+
+    
+    <span class="c"># Write the output to a CSV file</span>
+    <span class="n">filePath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outFolder</span><span class="p">,</span><span class="s">&quot;Standard_Report.csv&quot;</span><span class="p">)</span>
+    <span class="n">Title</span> <span class="o">=</span> <span class="s">&quot;Standard Comparison Report &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fun</span><span class="o">.</span><span class="n">getDateString</span><span class="p">(</span><span class="n">minSep</span><span class="o">=</span><span class="s">&#39;:&#39;</span><span class="p">))</span>
+    <span class="n">CSV</span> <span class="o">=</span> <span class="n">gencsv</span><span class="o">.</span><span class="n">DataToCSV</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">Title</span><span class="p">)</span> 
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">retDict</span><span class="p">:</span>
+        <span class="n">CSV</span><span class="o">.</span><span class="n">writeRows</span><span class="p">([[</span><span class="n">entry</span><span class="p">],[]])</span>
+        <span class="n">CSV</span><span class="o">.</span><span class="n">writeDataFromDict</span><span class="p">(</span><span class="n">retDict</span><span class="p">[</span><span class="n">entry</span><span class="p">],</span><span class="n">colHeads</span><span class="o">=</span><span class="n">ColHeaders</span><span class="p">,</span><span class="n">footerItems</span><span class="o">=</span><span class="n">Footer</span><span class="p">)</span>
+        <span class="n">CSV</span><span class="o">.</span><span class="n">writeRows</span><span class="p">([[],[]])</span>
+    <span class="n">CSV</span><span class="o">.</span><span class="n">closeCSVFile</span><span class="p">()</span> 
+
+    <span class="k">print</span> <span class="s">&quot;Standard report made.&quot;</span>
+    <span class="k">return</span> <span class="n">retDict</span><span class="p">,</span> <span class="n">dataDict</span>
+    
+        
+
+
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span>
+</div>
+<div class="viewcode-block" id="compareToStandards"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.nexus.compareToStandards">[docs]</a><span class="k">def</span> <span class="nf">compareToStandards</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">STDpath</span><span class="o">=</span><span class="s">&#39;standards/all_stds&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a csv file of the standard data&quot;&quot;&quot;</span>
+    <span class="n">dirtFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">STDpath</span><span class="p">,</span><span class="s">&#39;all_dirt&#39;</span><span class="p">)</span>
+    <span class="n">platFolder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">STDpath</span><span class="p">,</span><span class="s">&#39;all_plat&#39;</span><span class="p">)</span>
+    <span class="n">dirtPaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirtFolder</span><span class="p">,</span><span class="n">dm</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">dm</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dirtFolder</span><span class="p">)</span>
+                 <span class="k">if</span> <span class="n">dm</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.png&#39;</span><span class="p">)]</span>
+    <span class="n">PtPaths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">platFolder</span><span class="p">,</span><span class="n">dm</span><span class="p">)</span>
+              <span class="k">for</span> <span class="n">dm</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">platFolder</span><span class="p">)</span>
+              <span class="k">if</span> <span class="n">dm</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.png&#39;</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">dirtFolder</span><span class="p">:</span>
+        <span class="n">dirtmap</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">dirtArea</span><span class="p">,</span> 
+        <span class="n">dirtNum</span><span class="p">,</span>
+        <span class="n">DirtSizes</span><span class="p">,</span>
+        <span class="n">labeled</span><span class="p">)</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcDirt</span><span class="p">(</span><span class="n">dirtmap</span><span class="p">,</span>
+                                <span class="n">res</span><span class="p">,</span> 
+                                <span class="n">returnSizes</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                <span class="n">returnLabelled</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> 
+                                <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
+        <span class="p">(</span><span class="n">MeanSize</span><span class="p">,</span> 
+        <span class="n">MaxSize</span><span class="p">,</span> 
+        <span class="n">percOver100</span><span class="p">)</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">getDirtSizeData</span><span class="p">(</span><span class="n">DirtSizes</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+<span class="c">################################################################################</span>
+
+<span class="c">################################################################################</span></div>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">#TESTING:</span>
+<span class="sd">x = raw_input(&quot;Are you going to run the full test? (y/n) &quot;)</span>
+<span class="sd">if x==&#39;n&#39;:# on-off switch for running this test.</span>
+<span class="sd">    pass</span>
+<span class="sd">elif x==&#39;y&#39;:</span>
+<span class="sd">    if __name__==&#39;__main__&#39;:</span>
+<span class="sd">        import shutil</span>
+<span class="sd">        path = &quot;standards/all_stds&quot;</span>
+<span class="sd">        methods = [&#39;cleantests&#39;,&#39;bigfoils&#39;, &#39;histogram&#39;,&#39;standard&#39;]</span>
+<span class="sd">        masks = [0,&quot;standards/all_masks&quot;]</span>
+<span class="sd">        modirt = [&#39;Mo&#39;,&#39;Dirt&#39;]</span>
+<span class="sd">        for meth in methods:</span>
+<span class="sd">            for m in masks:</span>
+<span class="sd">                for md in modirt:</span>
+<span class="sd">                    analyzImgOrFolder(path, 16, method=meth,</span>
+<span class="sd">                                    MoDirt=md,Mask=m,</span>
+<span class="sd">                                    genPoster=True,verbose=True)</span>
+<span class="sd">                    if type(m)==str:</span>
+<span class="sd">                        M = &#39;withMasks&#39;</span>
+<span class="sd">                    else:</span>
+<span class="sd">                        M = &#39;0Masks&#39;</span>
+<span class="sd">                    direct = &quot;_&quot;.join([&quot;Output/Tests/master&quot;,meth, M, md])</span>
+<span class="sd">                    os.makedirs(direct)</span>
+<span class="sd">                    shutil.move(&quot;Output/Output_all_stds_&quot;+meth,direct)</span>
+<span class="sd">                    </span>
+<span class="sd">        folder = &quot;Output/Tests/&quot;</span>
+<span class="sd">        if not os.path.exists(&quot;Output/Tests/all_stds&quot;):</span>
+<span class="sd">            os.makedirs(&quot;Output/Tests/all_stds&quot;)</span>
+<span class="sd">        for direct in [d for d in os.listdir(folder) if d.startswith(&#39;master&#39;)]:</span>
+<span class="sd">            meth = direct.split(&#39;_&#39;)[1]</span>
+<span class="sd">            path = os.path.join(folder,direct,&quot;Output_all_stds_&quot;+meth)</span>
+<span class="sd">            CSVname = [c for c in os.listdir(path) if c.endswith(&#39;.csv&#39;)][0]</span>
+<span class="sd">            CSVnewpath = os.path.join(&quot;Output/Tests/all_stds&quot;,direct+&#39;.csv&#39;)</span>
+<span class="sd">            CSVoldpath = [os.path.join(path,CSVname)][0]</span>
+<span class="sd">            print &quot;old path: &quot; + CSVoldpath</span>
+<span class="sd">            print &quot;new path: &quot; + CSVnewpath</span>
+<span class="sd">            print &quot;name: &quot; + CSVname</span>
+<span class="sd">            if os.path.exists(CSVoldpath):</span>
+<span class="sd">                os.rename(CSVoldpath,CSVnewpath)</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

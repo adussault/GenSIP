@@ -1,0 +1,692 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.GenGUI &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.GenGUI</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">GenGUI is a module that creates a GUI that allows the user to make adjustments to</span>
+<span class="sd">an image and play with the threshold value and threshold methods. </span>
+<span class="sd">To use:</span>
+<span class="sd">    1. Run this file in python/iPython</span>
+<span class="sd">    2. load the image you want to analyze as an ndarray using fun.loadImg(filepath)</span>
+<span class="sd">    3. Call GUIfy using that ndarray as input</span>
+<span class="sd">This module hasn&#39;t been updated in a while and was rather haphazard from the </span>
+<span class="sd">beginning, so it may not work very well, and not all features will work, but it </span>
+<span class="sd">still should basically function. </span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">Tkinter</span> <span class="kn">as</span> <span class="nn">Tk</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">mahotas</span> <span class="kn">as</span> <span class="nn">mh</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">misc</span>
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">from</span> <span class="nn">GenSIP.kuwahara</span> <span class="kn">import</span> <span class="n">Kuwahara</span>
+<span class="kn">from</span> <span class="nn">matplotlib.backends.backend_tkagg</span> <span class="kn">import</span> <span class="n">FigureCanvasTkAgg</span><span class="p">,</span> <span class="n">NavigationToolbar2TkAgg</span>
+<span class="kn">from</span> <span class="nn">matplotlib.figure</span> <span class="kn">import</span> <span class="n">Figure</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="GUIfy"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.GenGUI.GUIfy">[docs]</a><span class="k">def</span> <span class="nf">GUIfy</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method takes an image of a foil (a numpy ndarray, not a pathname),and starts </span>
+<span class="sd">    up a GUI that allows the user to adjust the settings on various functions in </span>
+<span class="sd">    order to see their effects on the foil. The most developed of the sub-GUIs is </span>
+<span class="sd">    the regionalThresh GUI. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">makeOdd</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+            <span class="n">Tk</span><span class="o">.</span><span class="n">blocksize</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">win_destroy</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">r1Destroy</span><span class="p">():</span>
+        <span class="n">root1</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+    <span class="c">########################################################</span>
+    <span class="c">################       SETUP       #####################</span>
+    <span class="c">########################################################</span>
+    <span class="k">def</span> <span class="nf">setupGUI</span><span class="p">():</span>
+        <span class="n">win_destroy</span><span class="p">(</span><span class="n">root1</span><span class="p">)</span>
+        <span class="k">global</span> <span class="n">root2</span>
+        <span class="k">global</span> <span class="n">f</span>
+        <span class="k">global</span> <span class="n">a</span>
+        <span class="k">global</span> <span class="n">canvas</span>
+        <span class="k">global</span> <span class="n">toolbar</span>
+        <span class="n">root2</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Tk</span><span class="p">()</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">Figure</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+        <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+        <span class="n">a</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s">&quot;40393,0230 before cleaning&quot;</span><span class="p">)</span>
+        
+        <span class="n">canvas</span> <span class="o">=</span> <span class="n">FigureCanvasTkAgg</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">master</span><span class="o">=</span><span class="n">root2</span><span class="p">)</span>
+        <span class="n">canvas</span><span class="o">.</span><span class="n">get_tk_widget</span><span class="p">()</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">side</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">BOTH</span><span class="p">,</span><span class="n">expand</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">canvas</span><span class="o">.</span><span class="n">_tkcanvas</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">sticky</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">SW</span><span class="p">)</span>
+        <span class="c">#Navigation Toolbar automatically calls pack, so it requires a frame,</span>
+        <span class="c"># which can then be put in a grid:</span>
+        <span class="n">toolbar_frame</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="n">root2</span><span class="p">)</span>
+        <span class="n">toolbar_frame</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">toolbar</span> <span class="o">=</span> <span class="n">NavigationToolbar2TkAgg</span><span class="p">(</span><span class="n">canvas</span><span class="p">,</span> <span class="n">toolbar_frame</span><span class="p">)</span>   
+        <span class="n">toolbar</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        
+    <span class="k">def</span> <span class="nf">resetGUI</span><span class="p">():</span>
+        <span class="n">root2</span><span class="o">.</span><span class="n">destroy</span><span class="p">()</span>
+        <span class="n">GUIfy</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">showOG</span><span class="p">():</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+    <span class="c">####________________________________________________________####</span>
+    <span class="c">####</span>
+    <span class="c">####________________________________________________________####</span>
+    
+    
+    <span class="c">#############################################################</span>
+    <span class="c">########                   GUICONTS                    ######</span>
+    <span class="c">#############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIconts</span><span class="p">():</span>
+        
+        <span class="k">def</span> <span class="nf">FindContours</span><span class="p">():</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">Thresh1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">Thresh2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">canny</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span><span class="n">t2</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">canny</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="n">setupGUI</span><span class="p">()</span>
+        
+        <span class="n">Thresh1</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Threshold 1&#39;</span><span class="p">)</span>
+        <span class="n">Thresh1</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">55</span><span class="p">)</span>
+        <span class="n">Thresh1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">Thresh2</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Threshold 2&#39;</span><span class="p">)</span>
+        <span class="n">Thresh2</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="n">Thresh2</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">Update</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Update&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">FindContours</span><span class="p">)</span>
+        <span class="n">Update</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+        
+    <span class="c">#############################################################</span>
+    <span class="c">########                    GUIADPTRSH                 ######</span>
+    <span class="c">#############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIadptrsh</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">AdaptThresh</span><span class="p">():</span>
+            <span class="n">maVal</span> <span class="o">=</span> <span class="mi">255</span><span class="c">#maxVal.get()</span>
+            <span class="n">bsize</span> <span class="o">=</span> <span class="n">blocksize</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">C</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">adtv</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">adaptiveThreshold</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">maVal</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">ADAPTIVE_THRESH_GAUSSIAN_C</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">THRESH_BINARY</span><span class="p">,</span>\
+            <span class="n">bsize</span><span class="p">,</span><span class="n">c</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">adtv</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="n">setupGUI</span><span class="p">()</span>
+        <span class="n">blocksize</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">1001</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Block Size&#39;</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">makeOdd</span><span class="p">)</span>
+        <span class="n">blocksize</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">55</span><span class="p">)</span>
+        <span class="c">#blocksize.pack(side=LEFT, after=maxVal)</span>
+        <span class="n">blocksize</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">C</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;C&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c">#C.pack(side=RIGHT)</span>
+        <span class="n">C</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">Update</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Update&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">AdaptThresh</span><span class="p">)</span>
+        <span class="n">Update</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+    <span class="c">#############################################################</span>
+    <span class="c">########                   GUIBILAT                    ######</span>
+    <span class="c">#############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIbilat</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">Bilat</span><span class="p">():</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">D</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">sigColor</span><span class="o">=</span><span class="n">sigC</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">sigSpace</span><span class="o">=</span><span class="n">sigS</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">bilat</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">bilateralFilter</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">sigColor</span><span class="p">,</span> <span class="n">sigSpace</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">bilat</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="n">setupGUI</span><span class="p">()</span>
+        <span class="n">D</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Distance&#39;</span><span class="p">)</span>
+        <span class="n">D</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">55</span><span class="p">)</span>
+        <span class="n">D</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">sigC</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;SigColor&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">sigC</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">sigC</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">sigS</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;SigSpace&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">250</span><span class="p">)</span>
+        <span class="n">sigS</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="n">sigS</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">Update</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Update&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">Bilat</span><span class="p">)</span>
+        <span class="n">Update</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+    <span class="c">#############################################################</span>
+    <span class="c">########                   GUIPOST                     ######</span>
+    <span class="c">#############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIpost</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">pfy</span><span class="p">():</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">posterfy</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">cfy</span><span class="p">():</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">Thresh1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">Thresh2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">posterfy</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k</span><span class="p">)</span>
+            <span class="n">canny</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span><span class="n">t2</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">canny</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">ffy</span><span class="p">():</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">Thresh1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">Thresh2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">posterfy</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k</span><span class="p">)</span>
+            <span class="n">ncs</span><span class="o">=</span><span class="n">NumConts</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">canny</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span><span class="n">t2</span><span class="p">)</span>
+            <span class="n">conts</span><span class="p">,</span><span class="n">hier</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">canny</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span><span class="n">cv2</span><span class="o">.</span><span class="n">RETR_TREE</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_NONE</span><span class="p">)</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">fillAllConts</span><span class="p">(</span><span class="n">canny</span><span class="p">,</span><span class="n">conts</span><span class="p">,</span><span class="n">ncs</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">posterfy</span><span class="p">(</span><span class="n">ar</span><span class="p">,</span><span class="n">k_size</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+            <span class="n">nar</span><span class="o">=</span><span class="n">ar</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">blk</span><span class="o">=</span><span class="p">(</span><span class="n">nar</span><span class="o">&lt;=</span><span class="mi">4</span><span class="p">)</span>
+            <span class="n">pleat</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="o">&lt;=</span><span class="n">nar</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">nar</span><span class="o">&lt;=</span><span class="mi">75</span><span class="p">)</span>
+            <span class="n">darkMo</span><span class="o">=</span><span class="p">(</span><span class="mi">76</span><span class="o">&lt;=</span><span class="n">nar</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">nar</span><span class="o">&lt;=</span><span class="mi">99</span><span class="p">)</span>
+            <span class="n">Mo</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="o">&lt;=</span><span class="n">nar</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">nar</span><span class="o">&lt;=</span><span class="mi">199</span><span class="p">)</span>
+            <span class="n">Pt</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="o">&lt;=</span><span class="n">nar</span><span class="p">)</span>
+            <span class="n">nar</span><span class="p">[</span><span class="n">blk</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+            <span class="n">nar</span><span class="p">[</span><span class="n">pleat</span><span class="p">]</span><span class="o">=</span><span class="mi">50</span>
+            <span class="n">nar</span><span class="p">[</span><span class="n">darkMo</span><span class="p">]</span><span class="o">=</span><span class="mi">85</span>
+            <span class="n">nar</span><span class="p">[</span><span class="n">Mo</span><span class="p">]</span><span class="o">=</span><span class="mi">150</span>
+            <span class="n">nar</span><span class="p">[</span><span class="n">Pt</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+            <span class="n">nar</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">maskEdge</span><span class="p">(</span><span class="n">nar</span><span class="p">,</span><span class="n">thickness</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+            <span class="c">#Do a morphological opening step to eliminate the rough edges</span>
+            <span class="c"># I prefer opening over closing because it is more important to catch</span>
+            <span class="c"># all of the dark areas, as the Pt areas will have pretty sraightforward</span>
+            <span class="c"># threshold results</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">k_size</span><span class="p">,</span><span class="n">k_size</span><span class="p">))</span>
+            <span class="n">nar</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">nar</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_OPEN</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">nar</span>
+        <span class="k">def</span> <span class="nf">fillAllConts</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">conts</span><span class="p">,</span><span class="n">numconts</span><span class="p">):</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_GRAY2RGB</span><span class="p">)</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">F</span><span class="p">:</span>
+                <span class="c">#fill all contours if fill box is checked</span>
+                <span class="n">opt</span><span class="o">=-</span><span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c">#draw contour perimeter with thickness of 5 otherwise</span>
+                <span class="n">opt</span><span class="o">=</span><span class="mi">5</span>
+            <span class="k">if</span> <span class="n">numconts</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">conts</span><span class="p">):</span>
+                <span class="n">nc</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">conts</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">nc</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">numconts</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nc</span><span class="p">:</span>
+                <span class="n">colors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="o">*</span><span class="mi">7</span><span class="p">,</span><span class="mi">255</span><span class="o">-</span><span class="n">x</span><span class="o">*</span><span class="mi">7</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nc</span><span class="p">:</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">drawContours</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">conts</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">opt</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">img</span>
+        
+        <span class="n">setupGUI</span><span class="p">()</span>
+        <span class="n">K</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;kernel size&#39;</span><span class="p">)</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">Thresh1</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Threshold 1&#39;</span><span class="p">)</span>
+        <span class="n">Thresh1</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">55</span><span class="p">)</span>
+        <span class="n">Thresh1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">Thresh2</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Threshold 2&#39;</span><span class="p">)</span>
+        <span class="n">Thresh2</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="n">Thresh2</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">NumConts</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Number of Contours to examine&#39;</span><span class="p">)</span>
+        <span class="n">NumConts</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">33</span><span class="p">)</span>
+        <span class="n">NumConts</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">F</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">BooleanVar</span><span class="p">()</span>
+        <span class="n">Fill</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">CheckTk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">text</span><span class="o">=</span><span class="s">&quot;Fill Contours&quot;</span><span class="p">,</span><span class="n">variable</span><span class="o">=</span><span class="n">F</span><span class="p">)</span>
+
+        <span class="n">Fill</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">pofy</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Posterfy&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">pfy</span><span class="p">)</span>
+        <span class="n">pofy</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">contfy</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Get Contours&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">cfy</span><span class="p">)</span>
+        <span class="n">contfy</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">fillfy</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Paint Contours&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">ffy</span><span class="p">)</span>
+        <span class="n">fillfy</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">ORIG</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Show Original&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">showOG</span><span class="p">)</span>
+        <span class="n">ORIG</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+    <span class="c">##############################################################</span>
+    <span class="c">########                   GUITHRESH                    ######</span>
+    <span class="c">##############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIthresh</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">Thresh</span><span class="p">():</span>
+            <span class="n">maVal</span> <span class="o">=</span> <span class="n">MAX</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">thresh</span> <span class="o">=</span> <span class="n">THRESH</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">gauss</span> <span class="o">=</span> <span class="n">BLUR</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">imageF</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">(</span><span class="n">gauss</span><span class="p">,</span><span class="n">gauss</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">ret</span><span class="p">,</span><span class="n">thr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">imageF</span><span class="p">,</span><span class="n">thresh</span><span class="p">,</span><span class="n">maVal</span><span class="p">,</span><span class="n">V</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">def</span> <span class="nf">cann</span><span class="p">():</span>
+            <span class="n">maVal</span> <span class="o">=</span> <span class="n">MAX</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">thresh</span> <span class="o">=</span> <span class="n">THRESH</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">ret</span><span class="p">,</span><span class="n">thr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">thresh</span><span class="p">,</span><span class="n">maVal</span><span class="p">,</span><span class="n">V</span><span class="p">)</span>
+            <span class="n">can</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span><span class="n">thresh</span><span class="p">,</span><span class="n">maVal</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">can</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        
+        <span class="k">def</span> <span class="nf">makeGaussOdd</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">BLUR</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                
+        <span class="n">setupGUI</span><span class="p">()</span>
+        
+        <span class="n">THRESH</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Threshold&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">THRESH</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">THRESH</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">MAX</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Maximum Value&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">MAX</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">MAX</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">BLUR</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Gaussian Blur&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">makeGaussOdd</span><span class="p">)</span>
+        <span class="n">BLUR</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">BLUR</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">v</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Binary&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Binary Inverse&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Truncated&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;To Zero&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;To Zero Inverse&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Mask&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Otsu&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        
+        <span class="n">Update</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Threshold&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">Thresh</span><span class="p">)</span>
+        <span class="n">Update</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">CAN</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Find Edges&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">cann</span><span class="p">)</span>
+        <span class="n">CAN</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">ORIG</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Show Original&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">showOG</span><span class="p">)</span>
+        <span class="n">ORIG</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+        
+    <span class="c">#############################################################</span>
+    <span class="c">########               REGIONAL THRESH                 ######</span>
+    <span class="c">#############################################################</span>
+    <span class="k">def</span> <span class="nf">GUIreg</span><span class="p">():</span>
+    <span class="c"># This GUI has several functions plugged into it: posterfy, regionalThresh,</span>
+    <span class="c">#  Threshold, and pre-Poster.</span>
+        <span class="k">def</span> <span class="nf">pfy</span><span class="p">():</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">kuw</span> <span class="o">=</span> <span class="n">KUW</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">g1</span><span class="o">=</span><span class="n">G1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">g2</span><span class="o">=</span><span class="n">G2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">global</span> <span class="n">poster</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span> <span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">kuw</span><span class="p">,</span><span class="n">g1</span><span class="p">,</span><span class="n">g2</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">poster</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="k">def</span> <span class="nf">prePost</span><span class="p">():</span>
+            <span class="n">KuSize</span> <span class="o">=</span> <span class="n">KUW</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">Gaus1</span><span class="o">=</span><span class="n">G1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">Gaus2</span><span class="o">=</span><span class="n">G2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">rsz</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+            <span class="n">gr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rsz</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus1</span><span class="p">,</span><span class="n">Gaus1</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">kgr</span> <span class="o">=</span> <span class="n">Kuwahara</span><span class="p">(</span><span class="n">gr</span><span class="p">,</span><span class="n">KuSize</span><span class="p">)</span>
+            <span class="n">rkgr</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">kgr</span><span class="p">,(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+            <span class="n">grkgr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rkgr</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus2</span><span class="p">,</span><span class="n">Gaus2</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grkgr</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="k">def</span> <span class="nf">UpdatePoster</span><span class="p">():</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">kuw</span> <span class="o">=</span> <span class="n">KUW</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">g1</span><span class="o">=</span><span class="n">G1</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">g2</span><span class="o">=</span><span class="n">G2</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">global</span> <span class="n">poster</span>
+            <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">kuw</span><span class="p">,</span><span class="n">g1</span><span class="p">,</span><span class="n">g2</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+            
+        <span class="k">def</span> <span class="nf">calcDirt</span><span class="p">():</span>
+            <span class="n">p</span><span class="o">=</span><span class="n">PLEAT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">d</span><span class="o">=</span><span class="n">DARKMO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">m</span><span class="o">=</span><span class="n">MO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">pt</span><span class="o">=</span><span class="n">PT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">gauss</span><span class="o">=</span><span class="n">BLUR</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">thrshType</span><span class="o">=</span><span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">thisposter</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+            <span class="n">thisthreshed</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">regionalThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">thisposter</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">pt</span><span class="p">,</span><span class="n">gauss</span><span class="p">,</span><span class="n">thrshType</span><span class="p">,</span><span class="n">MaskEdges</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">inv</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">thisthreshed</span><span class="p">)</span>
+            <span class="n">inv</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+            <span class="n">labelledFoil</span><span class="p">,</span><span class="n">numDirt</span> <span class="o">=</span> <span class="n">mh</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">inv</span><span class="p">)</span>
+            <span class="n">areaDirt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">thisthreshed</span><span class="o">/</span><span class="mi">255</span><span class="p">)</span>
+            <span class="k">print</span> <span class="s">&quot;Number of Dirt Particles: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">numDirt</span>
+            <span class="k">print</span> <span class="s">&quot;Area of Dirt Particles: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">areaDirt</span>
+            <span class="k">print</span> <span class="s">&quot;Inv </span><span class="si">%s</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="n">inv</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="k">print</span> <span class="n">inv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">print</span> <span class="s">&quot;labelled: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="n">labelledFoil</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="k">print</span> <span class="s">&quot;Threshed: </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="n">thisthreshed</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="k">print</span> <span class="n">thisthreshed</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> 
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">labelledFoil</span><span class="p">,</span><span class="s">&quot;jet&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="k">def</span> <span class="nf">calcPt</span><span class="p">():</span>
+            <span class="n">UpdatePoster</span><span class="p">()</span>
+            <span class="n">p</span><span class="o">=</span><span class="n">PLEAT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">d</span><span class="o">=</span><span class="n">DARKMO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">m</span><span class="o">=</span><span class="n">MO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">pt</span><span class="o">=</span><span class="n">PT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">gauss</span><span class="o">=</span><span class="n">BLUR</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">thrshType</span><span class="o">=</span><span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="k">global</span> <span class="n">threshed</span>
+            <span class="n">threshed</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">regionalThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">pt</span><span class="p">,</span><span class="n">gauss</span><span class="p">,</span><span class="n">thrshType</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">threshed</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            <span class="n">binthresh</span> <span class="o">=</span> <span class="n">threshed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+            <span class="n">PtArea</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">calcPtArea</span><span class="p">(</span><span class="n">binthresh</span><span class="p">)</span>
+            <span class="k">print</span> <span class="s">&quot;Area of Pt (pixels): </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">PtArea</span>
+            
+        <span class="k">def</span> <span class="nf">fT</span><span class="p">():</span>
+            <span class="n">UpdatePoster</span><span class="p">()</span>
+            <span class="n">p</span><span class="o">=</span><span class="n">PLEAT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">d</span><span class="o">=</span><span class="n">DARKMO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">m</span><span class="o">=</span><span class="n">MO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">pt</span><span class="o">=</span><span class="n">PT</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">gauss</span><span class="o">=</span><span class="n">BLUR</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">thrshType</span><span class="o">=</span><span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="k">global</span> <span class="n">threshed</span>
+            <span class="n">threshed</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">regionalThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">d</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">pt</span><span class="p">,</span><span class="n">gaussBlur</span><span class="o">=</span><span class="n">gauss</span><span class="p">,</span><span class="n">threshType</span><span class="o">=</span><span class="n">thrshType</span><span class="p">,</span><span class="n">MaskEdges</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">threshed</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        
+        <span class="k">def</span> <span class="nf">Thresh</span><span class="p">():</span>
+            <span class="n">maVal</span> <span class="o">=</span> <span class="mi">255</span>
+            <span class="n">thresh</span> <span class="o">=</span> <span class="n">MO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="nb">long</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+            <span class="n">gauss</span> <span class="o">=</span> <span class="n">BLUR</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">imageF</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">(</span><span class="n">gauss</span><span class="p">,</span><span class="n">gauss</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">ret</span><span class="p">,</span><span class="n">thr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">imageF</span><span class="p">,</span><span class="n">thresh</span><span class="p">,</span><span class="n">maVal</span><span class="p">,</span><span class="n">V</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+        <span class="k">def</span> <span class="nf">cann</span><span class="p">():</span>
+            <span class="n">thr</span><span class="o">=</span><span class="n">MO</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">UpdatePoster</span><span class="p">()</span>
+            <span class="n">can</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">255</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">can</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+            <span class="n">a</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        
+        <span class="k">def</span> <span class="nf">makeGaussOdd</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">BLUR</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">makeG1Odd</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">G1</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">makeG2Odd</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">%</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">G2</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">fixKuwahara</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="c">#global past</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n</span><span class="o">%</span><span class="mi">4</span><span class="o">!=</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">KUW</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="n">n</span><span class="o">%</span><span class="mi">4</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                
+        <span class="n">setupGUI</span><span class="p">()</span>
+
+        <span class="c">###################################</span>
+        <span class="c">####        VARIABLES          ####</span>
+        <span class="c">###################################</span>
+        
+            <span class="c">### Threshold variables ###</span>
+        <span class="n">PLEAT</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Pleat&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">PLEAT</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">PLEAT</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">DARKMO</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Dark Moly&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">DARKMO</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
+        <span class="n">DARKMO</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">MO</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Moly&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">MO</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">55</span><span class="p">)</span>
+        <span class="n">MO</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">PT</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Platinum&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">PT</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+        <span class="n">PT</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">BLUR</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Gaussian Blur&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">makeGaussOdd</span><span class="p">)</span>
+        <span class="n">BLUR</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">BLUR</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">columnspan</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c">### Posterfy variables ###</span>
+        <span class="n">K</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Kernel size&#39;</span><span class="p">)</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+        <span class="n">K</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="c">### makePoster Variables ###</span>
+        <span class="n">KUW</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span><span class="n">from_</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">to</span><span class="o">=</span><span class="mi">21</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">84</span><span class="p">,</span>\
+        <span class="n">label</span><span class="o">=</span><span class="s">&#39;Kuwahara size&#39;</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">fixKuwahara</span><span class="p">)</span>
+        <span class="n">KUW</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+        <span class="n">KUW</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        
+        <span class="n">G1</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;1st Gaussian Blur&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">makeG1Odd</span><span class="p">)</span>
+        <span class="n">G1</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">G1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        
+        <span class="n">G2</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">from_</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">to</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;2nd Gaussian Blur&quot;</span><span class="p">,</span><span class="n">orient</span><span class="o">=</span><span class="n">Tk</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">,</span>\
+        <span class="n">length</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="n">command</span><span class="o">=</span><span class="n">makeG2Odd</span><span class="p">)</span>
+        <span class="n">G2</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span>
+        <span class="n">G2</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        
+        
+        <span class="c">####### Tk.RadiobuttonS #######</span>
+        
+        <span class="n">v</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">IntVar</span><span class="p">()</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Binary&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Binary Inverse&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Truncated&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;To Zero&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;To Zero Inverse&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">Tk</span><span class="o">.</span><span class="n">Radiobutton</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Otsu&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="c">###############################</span>
+        <span class="c">#######     Tk.ButtonS     #######</span>
+        <span class="c">###############################</span>
+        
+        <span class="n">pofy</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Posterfy&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">pfy</span><span class="p">)</span>
+        <span class="n">pofy</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">FT</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Regional Thresh&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">fT</span><span class="p">)</span>
+        <span class="n">FT</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">ORIG</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Show Original&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">showOG</span><span class="p">)</span>
+        <span class="n">ORIG</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">DIRTcal</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Print Amount Dirt&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">calcDirt</span><span class="p">)</span>
+        <span class="n">DIRTcal</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> 
+        
+        <span class="n">PTcal</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Print Pt Area&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">calcPt</span><span class="p">)</span>
+        <span class="n">PTcal</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> 
+                  
+        <span class="n">PROC</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Show Pre-Poster&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">prePost</span><span class="p">)</span>
+        <span class="n">PROC</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>      
+        
+        <span class="n">CAN</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Find Edges&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">cann</span><span class="p">)</span>
+        <span class="n">CAN</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">TH</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Threshold&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">Thresh</span><span class="p">)</span>
+        <span class="n">TH</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="n">CLOSE</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root2</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Main Menu&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">resetGUI</span><span class="p">)</span>
+        <span class="n">CLOSE</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        
+        <span class="n">root2</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+        
+    <span class="c"># Startup window</span>
+    <span class="n">root1</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Tk</span><span class="p">()</span>
+    <span class="n">FC</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;FindContours&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIconts</span><span class="p">)</span>
+    <span class="n">FC</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">AT</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Adaptive Threshold&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIadptrsh</span><span class="p">)</span>
+    <span class="n">AT</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">BIL</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Bilateral Filter&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIbilat</span><span class="p">)</span>
+    <span class="n">BIL</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">PO</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span><span class="n">text</span><span class="o">=</span><span class="s">&quot;Region Selection&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIpost</span><span class="p">)</span>
+    <span class="n">PO</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">TSH</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span><span class="n">text</span><span class="o">=</span><span class="s">&quot;Thresholding&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIthresh</span><span class="p">)</span>
+    <span class="n">TSH</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">REG</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span><span class="n">text</span><span class="o">=</span><span class="s">&quot;Regional Thresh&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">GUIreg</span><span class="p">)</span>
+    <span class="n">REG</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">CLOZ</span> <span class="o">=</span> <span class="n">Tk</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">root1</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s">&quot;Cancel&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="n">r1Destroy</span><span class="p">)</span>
+    <span class="n">CLOZ</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="n">root1</span><span class="o">.</span><span class="n">mainloop</span><span class="p">()</span>
+
+
+</div>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">kuwa230 = cv2.imread(&quot;InputPicts/Before/Before_TEST/Kuwahara230.tif&quot;,cv2.CV_LOAD_IMAGE_GRAYSCALE)    </span>
+<span class="sd">kuwa231 = cv2.imread(&quot;InputPicts/Before/Before_TEST/Kuwahara231.tif&quot;,cv2.CV_LOAD_IMAGE_GRAYSCALE)</span>
+<span class="sd">kuwa232 = cv2.imread(&quot;InputPicts/Before/Before_TEST/Kuwahara232.tif&quot;,cv2.CV_LOAD_IMAGE_GRAYSCALE)</span>
+
+<span class="sd">rekuwa231 = cv2.imread(&quot;InputPicts/Before/Before_TEST/0231 Resize Kuwahara.tif&quot;,cv2.CV_LOAD_IMAGE_GRAYSCALE)</span>
+<span class="sd">Prekuwa231 = cv2.imread(&quot;InputPicts/Before/Before_TEST/0231 Resize Kuwahara.png&quot;,cv2.CV_LOAD_IMAGE_GRAYSCALE)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

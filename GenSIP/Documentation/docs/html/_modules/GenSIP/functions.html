@@ -1,0 +1,565 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.functions &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.functions</h1><div class="highlight"><pre>
+<span class="c"># This module contains all functions used across GenSIP</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.figure</span> <span class="kn">as</span> <span class="nn">mplfig</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">misc</span>
+<span class="kn">from</span> <span class="nn">GenSIP.kuwahara</span> <span class="kn">import</span> <span class="n">Kuwahara</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">localtime</span><span class="p">,</span> <span class="n">asctime</span><span class="p">,</span> <span class="n">struct_time</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+
+<div class="viewcode-block" id="maskEdge"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.maskEdge">[docs]</a><span class="k">def</span> <span class="nf">maskEdge</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">thickness</span> <span class="o">=</span> <span class="mi">80</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function masks off the outer edge of the foil, since the edge complicates dirt particle counting</span>
+<span class="sd">    Parameters are:</span>
+<span class="sd">        img = nparray of image,</span>
+<span class="sd">        thickness = the number of pixels you want to take of the edge of the foil</span>
+<span class="sd">                    Based on the image resolution, 1 micron ~= i pixel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#Load image</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c"># Apply a morphological closing to the image to remove small dark areas:</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+    <span class="n">cimage</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_CLOSE</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+    <span class="c">#Threshold and blur image for contour detection</span>
+    <span class="n">blur2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">blur</span><span class="p">(</span><span class="n">cimage</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">thresh2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">blur2</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">THRESH_BINARY</span><span class="p">)</span>
+    <span class="c"># Put a black border around the thresholded image to prevent edge problems</span>
+    <span class="n">thresh2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">copyMakeBorder</span><span class="p">(</span><span class="n">thresh2</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">BORDER_CONSTANT</span><span class="p">,</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c">#Find the contours of the foil</span>
+    <span class="n">can1</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Canny</span><span class="p">(</span><span class="n">thresh2</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+    <span class="n">contours</span><span class="p">,</span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findContours</span><span class="p">(</span><span class="n">can1</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span><span class="n">cv2</span><span class="o">.</span><span class="n">RETR_TREE</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">CHAIN_APPROX_NONE</span><span class="p">)</span>
+
+    <span class="c"># Isolate and draw the largest contour, which should be the outline of the foil</span>
+    <span class="c"># Sort contours by size</span>
+    <span class="n">contours</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">contours</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">contourArea</span><span class="p">,</span> <span class="n">reverse</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="c"># Largest contour should be the outer edge of foil</span>
+    <span class="n">outercnt</span> <span class="o">=</span> <span class="n">contours</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c">#Create corresponding lists of contour areas and perimeters. </span>
+    <span class="c">#cntAreas = list()</span>
+    <span class="c">#cntPerim = list()</span>
+    <span class="c">#Black out the edges of the foil</span>
+    <span class="c">#Double the mask_thickness to get the thickness of the masking line. </span>
+    <span class="n">mask_thickness</span> <span class="o">=</span> <span class="n">thickness</span><span class="o">*</span><span class="mi">2</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">drawContours</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">[</span><span class="n">outercnt</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">mask_thickness</span><span class="p">)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">drawContours</span><span class="p">(</span><span class="n">thresh2</span><span class="p">,</span> <span class="p">[</span><span class="n">outercnt</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">mask_thickness</span><span class="p">)</span>
+    <span class="c"># remove border from thresh2</span>
+    <span class="n">thresh2</span> <span class="o">=</span> <span class="n">thresh2</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="n">thresh2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">:</span><span class="n">thresh2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">5</span><span class="p">]</span>
+    <span class="c"># Return both the image and the foil area for the sake of future moly loss</span>
+    <span class="c"># approximations and for dirt counting.</span>
+    <span class="k">return</span> <span class="n">image</span><span class="p">,</span><span class="n">thresh2</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+	</div>
+<div class="viewcode-block" id="makePoster"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.makePoster">[docs]</a><span class="k">def</span> <span class="nf">makePoster</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">kern</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">KuSize</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span><span class="n">Gaus1</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">Gaus2</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span><span class="n">rsize</span><span class="o">=.</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method takes the image of the foil and creates a smoothed Kuwahara image</span>
+<span class="sd">    used to make the poster for regional thresholding.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rsz</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">rsize</span><span class="p">,</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+    <span class="n">gr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rsz</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus1</span><span class="p">,</span><span class="n">Gaus1</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">kgr</span> <span class="o">=</span> <span class="n">Kuwahara</span><span class="p">(</span><span class="n">gr</span><span class="p">,</span><span class="n">KuSize</span><span class="p">)</span>
+    <span class="n">kgr</span> <span class="o">=</span> <span class="n">kgr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="c"># Make sure the Kuwahara image is uint8 so it doesn&#39;t scale</span>
+    <span class="n">rkgr</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">kgr</span><span class="p">,(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+    <span class="n">grkgr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rkgr</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus2</span><span class="p">,</span><span class="n">Gaus2</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">prkgr</span> <span class="o">=</span> <span class="n">posterfy</span><span class="p">(</span><span class="n">grkgr</span><span class="p">,</span><span class="n">kern</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">prkgr</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="posterfy"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.posterfy">[docs]</a><span class="k">def</span> <span class="nf">posterfy</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k_size</span><span class="o">=</span><span class="mi">6</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes a gray image and sets all values within a given range to a single value</span>
+<span class="sd">    this way we can divide up regions into primarily Pt, primarily Mo, dirt, or black</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">image_copy</span><span class="o">=</span><span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">image_copy</span><span class="o">=</span><span class="n">image_copy</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">blk</span><span class="o">=</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">pleat</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">75</span><span class="p">)</span>
+    <span class="n">darkMo</span><span class="o">=</span><span class="p">(</span><span class="mi">76</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">110</span><span class="p">)</span>
+    <span class="n">Mo</span><span class="o">=</span><span class="p">(</span><span class="mi">111</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">199</span><span class="p">)</span>
+    <span class="n">Pt</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">blk</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">pleat</span><span class="p">]</span><span class="o">=</span><span class="mi">50</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">darkMo</span><span class="p">]</span><span class="o">=</span><span class="mi">85</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">Mo</span><span class="p">]</span><span class="o">=</span><span class="mi">150</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">Pt</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+    <span class="c">#image_copy = maskEdge(image_copy,thickness=60)</span>
+    <span class="c">#Do a morphological opening step to eliminate the rough edges</span>
+    <span class="c"># I prefer opening over closing because it is more important to catch</span>
+    <span class="c"># all of the dark areas, as the Pt areas will have pretty sraightforward</span>
+    <span class="c"># threshold results</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">k_size</span><span class="p">,</span><span class="n">k_size</span><span class="p">))</span>
+    <span class="n">image_copy</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">image_copy</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_OPEN</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">image_copy</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+    </div>
+<div class="viewcode-block" id="regionalThresh"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.regionalThresh">[docs]</a><span class="k">def</span> <span class="nf">regionalThresh</span><span class="p">(</span><span class="n">ogimage</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span><span class="n">p</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span><span class="n">d</span><span class="o">=</span><span class="mi">28</span><span class="p">,</span><span class="n">m</span><span class="o">=</span><span class="mi">55</span><span class="p">,</span><span class="n">pt</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     This is the main thresholding method for analyzing the amount of Pt and dirt on</span>
+<span class="sd">    the foils. It takes the posterized image and splits the image into regions based on</span>
+<span class="sd">    the gray level in these different regions, then it assigns different threshold parameters </span>
+<span class="sd">    to the different regions, specified by the arguments p,d,m, and pt, which correspond to the</span>
+<span class="sd">    regions &#39;pleat&#39;,&#39;dark Molybdenum&#39;, &#39;Molybdenum,&#39; and &#39;platinum.&#39;</span>
+<span class="sd">    </span>
+<span class="sd">     regionalThresh returns the final thresholded image with the black area around the foil</span>
+<span class="sd">    cut out so that only the dirt appears. This allows mh.label to count the dirt and not get</span>
+<span class="sd">    thrown off by the foil outline. If the option &quot;GetMask&quot; is set to True, then regionalThresh</span>
+<span class="sd">    also returns the image of the outline of the foil and all regions that are black (&lt;5).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gaussBlur</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;gaussBlur&#39;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">threshType</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;threshType&#39;</span><span class="p">,</span><span class="il">0L</span><span class="p">)</span>
+    <span class="n">MaskEdges</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;MaskEdges&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">returnMask</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;returnMask&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">Mask</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Mask&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">MoDirt</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;MoDirt&#39;</span><span class="p">,</span><span class="s">&#39;dirt&#39;</span><span class="p">)</span>
+    <span class="n">verbose</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;verbose&#39;</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">poster</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;The poster is not the same shape as the original image.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">Image</span> <span class="o">=</span> <span class="n">ogimage</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">gPoster</span> <span class="o">=</span> <span class="n">poster</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">Image</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="c"># Create the images</span>
+    <span class="n">blk</span> <span class="o">=</span> <span class="n">gPoster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">pleat</span> <span class="o">=</span> <span class="n">gPoster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">darkMo</span> <span class="o">=</span> <span class="n">gPoster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">Mo</span> <span class="o">=</span> <span class="n">gPoster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">Pt</span> <span class="o">=</span> <span class="n">gPoster</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="c"># isolate various sections</span>
+    <span class="n">blk</span><span class="p">[</span><span class="n">blk</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">pleat</span><span class="p">[</span><span class="n">pleat</span><span class="o">!=</span><span class="mi">50</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">darkMo</span><span class="p">[</span><span class="n">darkMo</span><span class="o">!=</span><span class="mi">85</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">Mo</span><span class="p">[</span><span class="n">Mo</span><span class="o">!=</span><span class="mi">150</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">Pt</span><span class="p">[</span><span class="n">Pt</span><span class="o">!=</span><span class="mi">255</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;&#39;Platinum&#39; region (poster graylevel 255):&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;    Threshold value = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pt</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;    Number of pixels in region = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Pt</span><span class="p">[</span><span class="n">Pt</span><span class="o">==</span><span class="mi">255</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;&#39;Molybdenum&#39; region (poster graylevel 150):&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;    Threshold value = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;    Number of pixels in region = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">Mo</span><span class="p">[</span><span class="n">Mo</span><span class="o">==</span><span class="mi">150</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;&#39;Dark Molybdenum&#39; region (poster graylevel 85):&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;    Threshold value = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;    Number of pixels in region = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">darkMo</span><span class="p">[</span><span class="n">darkMo</span><span class="o">==</span><span class="mi">85</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;&#39;Pleat&#39; region (poster graylevel 50):&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;    Threshold value = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;    Number of pixels in region = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pleat</span><span class="p">[</span><span class="n">pleat</span><span class="o">==</span><span class="mi">85</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;&#39;Black&#39; region (poster graylevel 0) masked off from analysis&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;    Number of pixels in region = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">blk</span><span class="p">[</span><span class="n">blk</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+              
+    <span class="c"># mask the original image</span>
+    <span class="n">pleatMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">Image</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">pleatMask</span> <span class="o">=</span> <span class="p">(</span><span class="n">pleat</span><span class="o">/</span><span class="mi">50</span><span class="p">)</span><span class="o">*</span><span class="n">pleatMask</span>
+    <span class="n">darkMoMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">Image</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">darkMoMask</span> <span class="o">=</span> <span class="p">(</span><span class="n">darkMo</span><span class="o">/</span><span class="mi">85</span><span class="p">)</span><span class="o">*</span><span class="n">darkMoMask</span>
+    <span class="n">MoMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">Image</span><span class="p">,</span> <span class="p">(</span><span class="n">gaussBlur</span><span class="p">,</span><span class="n">gaussBlur</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">MoMask</span> <span class="o">=</span> <span class="p">(</span><span class="n">Mo</span><span class="o">/</span><span class="mi">150</span><span class="p">)</span><span class="o">*</span><span class="n">MoMask</span>
+    <span class="n">PtMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">Image</span><span class="p">,</span> <span class="p">(</span><span class="n">gaussBlur</span><span class="p">,</span><span class="n">gaussBlur</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">PtMask</span> <span class="o">=</span> <span class="p">(</span><span class="n">Pt</span><span class="o">/</span><span class="mi">255</span><span class="p">)</span><span class="o">*</span><span class="n">PtMask</span>
+    
+    <span class="c"># apply adjusted threshold</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">pleat</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">pleatMask</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">threshType</span><span class="p">)</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">darkMo</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">darkMoMask</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">threshType</span><span class="p">)</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">MoMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">MoMask</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">threshType</span><span class="p">)</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">PtMask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">PtMask</span><span class="p">,</span> <span class="n">pt</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">threshType</span><span class="p">)</span>
+      
+    <span class="c"># put it all together</span>
+    <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">,</span> <span class="n">pleat</span><span class="p">)</span>
+    <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">,</span> <span class="n">darkMo</span><span class="p">)</span>
+    <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">,</span> <span class="n">MoMask</span><span class="p">)</span>
+    <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">,</span> <span class="n">PtMask</span><span class="p">)</span>
+    
+    <span class="c"># If using an external mask, apply it here:</span>
+    <span class="c"># Mask is assumed to be a binary image where black represents the areas to be</span>
+    <span class="c"># masked off. </span>
+    <span class="k">if</span> <span class="n">MaskEdges</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">Mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">ogimage</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> \
+            <span class="s">&quot;Mask provided has different dimensions than the image to be threshed.&quot;</span>
+            <span class="n">threshMask</span> <span class="o">=</span> <span class="n">Mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span><span class="o">*</span><span class="n">blk</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># If no mask is provided, use the maskEdge function</span>
+            <span class="n">masked</span><span class="p">,</span><span class="n">threshMask</span> <span class="o">=</span> <span class="n">maskEdge</span><span class="p">(</span><span class="n">ogimage</span><span class="p">)</span>
+            <span class="n">threshMask</span><span class="o">=</span><span class="n">threshMask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span><span class="o">*</span><span class="n">blk</span>
+        
+        <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">threshMask</span><span class="o">*</span><span class="n">threshedImage</span>
+        <span class="c"># Make sure the threshed image and mask are both np.uint8 images with </span>
+        <span class="c"># white = 255.</span>
+        <span class="n">threshedImage</span><span class="p">[</span><span class="n">threshedImage</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+        <span class="n">threshMask</span> <span class="o">=</span> <span class="n">threshMask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">threshMask</span><span class="p">[</span><span class="n">threshMask</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+        
+        <span class="k">if</span> <span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+            <span class="c"># If regionalThresh is working with dirt analysis, the inverse of the </span>
+            <span class="c"># mask has to be applied so that all the masked off areas are whited</span>
+            <span class="c"># out and not blacked out. </span>
+            <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">threshedImage</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">threshMask</span><span class="p">)</span>
+            <span class="c"># Then inverse the threshed image so it is white dirt on black:</span>
+            <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">)</span>      
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span>          
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;dirt&#39;</span><span class="p">:</span>
+            <span class="c"># Make sure the black areas do not show up as dirt. Inverse so white </span>
+            <span class="c"># dirt is displayed over a black background.</span>
+            <span class="n">threshedImage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">threshedImage</span><span class="p">)</span><span class="o">*</span><span class="n">blk</span>
+            
+    <span class="c"># Return image or tuple with image and mask if specified. </span>
+    <span class="k">if</span> <span class="n">returnMask</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">threshedImage</span><span class="p">,</span><span class="n">threshMask</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">threshedImage</span>
+  
+    <span class="c">###############################</span>
+        <span class="c"># Combine the black region with the Mask</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="getFoilArea"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.getFoilArea">[docs]</a><span class="k">def</span> <span class="nf">getFoilArea</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FUNCTION MAY BE OUTDATED IF I REWORK MoComp AND isolatePT TO USE THE GetMask </span>
+<span class="sd">    OPTION AND USE THAT IMAGE TO APPROXIMATE FOIL AREA. </span>
+<span class="sd">    This is a function based on maskEdge that returns the approximate area of the foil.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - img = nparray of image,</span>
+<span class="sd">         - res = the resolution of the image, in square microns per pixel</span>
+<span class="sd">        Key-Word Arguments:</span>
+<span class="sd">         - getAreaInSquaremm - If true, converts the getFoilArea from square microns</span>
+<span class="sd">            to square millimeters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#Load image</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c"># Apply a morphological closing to the image to remove small dark areas:</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+    <span class="n">cimage</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_CLOSE</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+    <span class="c">#Threshold and blur image for contour detection</span>
+    <span class="n">blur2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">blur</span><span class="p">(</span><span class="n">cimage</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+    <span class="n">ret</span><span class="p">,</span><span class="n">thresh2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">blur2</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">THRESH_BINARY</span><span class="p">)</span>
+    <span class="n">thresh2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">copyMakeBorder</span><span class="p">(</span><span class="n">thresh2</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">BORDER_CONSTANT</span><span class="p">,</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c"># Approximate foil area is the sum of the white pixels divided by 255 and the </span>
+    <span class="c"># resolution. This method of calculating the area has a weak point of being </span>
+    <span class="c"># dependent on the white pixels, rather than the outer contour of the foil. </span>
+    <span class="c"># This means that if parts of the foil are covered in enough dirt to make them</span>
+    <span class="c"># appear black, then they won&#39;t be added to the approximate foil area. </span>
+    <span class="c"># For an area approximation that relies on the outer contour of the foil, </span>
+    <span class="c"># see GenSIP.py in version 2 or previous, or in the &quot;Outdated&quot; folder of this </span>
+    <span class="c"># version. That algorithm had the problem of occasionally messing up the outer</span>
+    <span class="c"># contour and throwing off the Moly loss calculations. </span>
+    <span class="n">thresh2</span><span class="p">[</span><span class="n">thresh2</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="n">foilarea</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">thresh2</span><span class="p">)</span><span class="o">*</span><span class="n">res</span>
+    <span class="k">if</span> <span class="n">getAreaInSquaremm</span><span class="p">:</span>
+        <span class="c"># Convert the foilarea to square mm</span>
+        <span class="n">foilarea</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">foilarea</span><span class="p">)</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span>
+    <span class="k">return</span> <span class="n">foilarea</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="show"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.show">[docs]</a><span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="o">*</span><span class="n">images</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a useful function for plotting and displaying any number of images quickly.</span>
+<span class="sd">    Arguments:</span>
+<span class="sd">        *images - any number of images you wish to display</span>
+<span class="sd">    Key Word arguments:</span>
+<span class="sd">        - color = &#39;gray&#39; - designates the color option use in plt.imshow.</span>
+<span class="sd">                Examples include &quot;jet,&quot; &quot;gray&quot; (default), more in docstring</span>
+<span class="sd">                for plt.imshow.</span>
+<span class="sd">        - rows = 1 - designates numbers of rows to display the images on</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Get key word arguments:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;color&#39;</span><span class="p">,</span><span class="s">&quot;gray&quot;</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;rows&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;figure&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">numImgs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+    <span class="c"># Columns of images is equal to the number of images divided by the specified number </span>
+    <span class="c"># of rows + the modulus of numImgs and rows.</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="n">numImgs</span><span class="o">/</span><span class="n">rows</span> <span class="o">+</span> <span class="n">numImgs</span><span class="o">%</span><span class="n">rows</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">figure</span><span class="p">)</span> <span class="o">==</span> <span class="n">mplfig</span><span class="o">.</span><span class="n">Figure</span><span class="p">:</span>
+        <span class="n">subplts</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pos</span><span class="p">:</span>
+            <span class="n">subplts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">figure</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span><span class="n">columns</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">subplts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">images</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pos</span><span class="p">:</span>
+       	    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span><span class="n">columns</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">images</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+
+</div>
+<div class="viewcode-block" id="loadImg"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.loadImg">[docs]</a><span class="k">def</span> <span class="nf">loadImg</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">CV_LOAD_IMAGE_GRAYSCALE</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a function for loading images. It basically just solves an issue with </span>
+<span class="sd">    cv2.imread and raises an exception if the path is wrong and cv2 returns a NoneType </span>
+<span class="sd">    rather than a numpy array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">flag</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">None</span><span class="p">)):</span>
+    <span class="c"># check if image is an instance of type &#39;NoneType&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s">&quot;path&quot;</span><span class="p">)):</span>
+        <span class="c"># Check if the path exists.</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Image file path does not exist.</span><span class="se">\n</span><span class="s"> Path: {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+        <span class="c"># This shouldn&#39;t come up often, but if the file exists but cv2.imread still</span>
+        <span class="c"># spits out a NoneType object, then this should catch the problem.</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Image file path exists, but cv2.imread couldn&#39;t load it.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">image</span>
+        
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="getDateString"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.getDateString">[docs]</a><span class="k">def</span> <span class="nf">getDateString</span><span class="p">(</span><span class="n">minSep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the date and time formated as &quot;mm-dd-yyyy hh:minminAM&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">localtime</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">tm_hour</span> <span class="o">&lt;</span> <span class="mi">12</span><span class="p">:</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="s">&quot;AM&quot;</span>
+        <span class="n">hour</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_hour</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">t</span><span class="o">.</span><span class="n">tm_hour</span><span class="o">&gt;</span><span class="mi">12</span><span class="p">:</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="s">&quot;PM&quot;</span>
+        <span class="n">hour</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_hour</span> <span class="o">-</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="s">&quot;PM&quot;</span>
+        <span class="n">hour</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_hour</span><span class="p">)</span>
+    <span class="n">datestring</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_mon</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;-&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_mday</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;-&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_year</span><span class="p">)</span><span class="o">+</span><span class="s">&#39; &#39;</span><span class="o">+</span><span class="n">hour</span><span class="o">+</span><span class="n">minSep</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">tm_min</span><span class="p">)</span><span class="o">+</span><span class="n">end</span> <span class="c"># Ex: &quot;4-21-2015 3.50PM&quot;</span>
+    <span class="k">return</span> <span class="n">datestring</span>
+    
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="justFrigginGetTheNormalTime"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.justFrigginGetTheNormalTime">[docs]</a><span class="k">def</span> <span class="nf">justFrigginGetTheNormalTime</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns time in the format: &#39;Mon Jun 22 17:49:39 2015&#39;</span>
+<span class="sd">    If called with no arguments, returns the current time in that format.</span>
+<span class="sd">    If called with a time as a float or a struct_time object, returns that</span>
+<span class="sd">    time in the specified format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">args</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="n">retTime</span> <span class="o">=</span> <span class="n">asctime</span><span class="p">(</span><span class="n">localtime</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">retTime</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">retTimes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+                <span class="n">retTimes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">asctime</span><span class="p">(</span><span class="n">localtime</span><span class="p">(</span><span class="n">arg</span><span class="p">)))</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="o">==</span> <span class="n">struct_time</span><span class="p">:</span>
+                <span class="n">retTimes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">asctime</span><span class="p">(</span><span class="n">arg</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">retTimes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">retTimes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">retTimes</span>
+            
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="getGenSIPVersion"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.getGenSIPVersion">[docs]</a><span class="k">def</span> <span class="nf">getGenSIPVersion</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This returns the string that names the current version of GenSIP. It assumes </span>
+<span class="sd">    that the current working directory is the one containing the GenSIP folder</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">directories</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;GenSIP_v&quot;</span><span class="p">):</span>
+            <span class="n">Version</span> <span class="o">=</span> <span class="n">f</span>
+            <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;GenSIP&quot;</span><span class="p">):</span>
+            <span class="n">mod_time</span> <span class="o">=</span> <span class="n">justFrigginGetTheNormalTime</span><span class="p">((</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">f</span><span class="p">)))</span>
+            <span class="n">Version</span> <span class="o">=</span> <span class="n">mod_time</span> <span class="o">+</span> <span class="s">&#39;(&#39;</span><span class="o">+</span><span class="n">f</span><span class="o">+</span><span class="s">&#39;)&#39;</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Version</span> <span class="o">=</span> <span class="s">&quot;Unknown&quot;</span>
+    <span class="k">return</span> <span class="n">Version</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="convTime"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.convTime">[docs]</a><span class="k">def</span> <span class="nf">convTime</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts the time from seconds to a string in minutes and seconds</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mins</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">seconds</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="o">%</span><span class="mi">60</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">mins</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;mins &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">seconds</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;secs&quot;</span>
+    
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="checkMoDirt"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.checkMoDirt">[docs]</a><span class="k">def</span> <span class="nf">checkMoDirt</span><span class="p">(</span><span class="n">MoDirt</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Allows for several input options for MoDirt and converts them into a standard</span>
+<span class="sd">    parameter &#39;mo&#39; or &#39;dirt&#39;, and raises an exception if the input is invalid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">allowableMo</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;mo&quot;</span><span class="p">,</span><span class="s">&quot;moly&quot;</span><span class="p">,</span><span class="s">&quot;molybdenum&quot;</span><span class="p">,</span><span class="s">&quot;m&quot;</span><span class="p">)</span>
+    <span class="n">allowableDirt</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;dirt&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MoDirt</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">allowableMo</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;mo&#39;</span>
+    <span class="k">if</span> <span class="n">MoDirt</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">allowableDirt</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;dirt&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s"> MoDirt must be one of the following: </span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span>\
+        <span class="nb">str</span><span class="p">(</span><span class="n">allowableMo</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s"> - - - - - or - - - - - </span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">allowableDirt</span><span class="p">))</span>
+    
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span></div>
+<div class="viewcode-block" id="makeDiamondKernel"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.makeDiamondKernel">[docs]</a><span class="k">def</span> <span class="nf">makeDiamondKernel</span><span class="p">(</span><span class="n">radius</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Creates a diamond shape kernel given the radius.</span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; makeDiamondKernel(2)</span>
+<span class="sd">    array([[ 0.,  0.,  1.,  0.,  0.],</span>
+<span class="sd">           [ 0.,  1.,  1.,  1.,  0.],</span>
+<span class="sd">           [ 1.,  1.,  1.,  1.,  1.],</span>
+<span class="sd">           [ 0.,  1.,  1.,  1.,  0.],</span>
+<span class="sd">           [ 0.,  0.,  1.,  0.,  0.]])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+            
+        
+    <span class="n">kern</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">radius</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="o">*</span><span class="n">radius</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">radius</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">kern</span><span class="p">[</span><span class="n">radius</span><span class="o">-</span><span class="n">i</span><span class="p">:</span><span class="n">radius</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">kern</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">radius</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">radius</span><span class="o">-</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">kern</span><span class="p">[</span><span class="o">-</span><span class="n">i</span><span class="p">,</span> <span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">i</span><span class="p">:</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">kern</span><span class="p">[</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">i</span><span class="p">:</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">,</span> <span class="o">-</span><span class="n">i</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+        <span class="c">#kern[:,radius-i]=1</span>
+    <span class="k">return</span> <span class="n">kern</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="FizzBuzz"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.functions.FizzBuzz">[docs]</a><span class="k">def</span> <span class="nf">FizzBuzz</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">101</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">3</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">5</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;FizzBuzz&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;Fizz&quot;</span>
+        <span class="k">elif</span> <span class="n">i</span><span class="o">%</span><span class="mi">5</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Buzz&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">i</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

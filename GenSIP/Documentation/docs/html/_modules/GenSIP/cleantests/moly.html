@@ -1,0 +1,344 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.cleantests.moly &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.cleantests.moly</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the functions necessary for analyzing the molybdenum loss</span>
+<span class="sd">on individual foils due to a cleaning test. </span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">GenSIP.measure</span> <span class="kn">as</span> <span class="nn">meas</span>
+<span class="kn">import</span> <span class="nn">GenSIP.gencsv</span> <span class="kn">as</span> <span class="nn">gencsv</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+
+<div class="viewcode-block" id="analyzeMoly"><a class="viewcode-back" href="../../../GenSIP.cleantests.html#GenSIP.cleantests.moly.analyzeMoly">[docs]</a><span class="k">def</span> <span class="nf">analyzeMoly</span> <span class="p">(</span><span class="n">sss</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    This is the master function for comparing the exposed Pt on foil images.</span>
+<span class="sd">    It takes in a &#39;Sample Set String&#39; (&#39;sss&#39;) and runs the comparison functions </span>
+<span class="sd">    on all of the foil pictures in the before and after folders of that sample set. </span>
+<span class="sd">    res is the resolution of the image, as micron per pixel. default set to one.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">        - sss -  The Sample Set String, a short identifier for whichever set</span>
+<span class="sd">                of SEM scans you are running.</span>
+<span class="sd">        - res - Resolution of the image, in square microns per pixel.   </span>
+<span class="sd">        Key-Word Arguments:</span>
+<span class="sd">        - verbose = False - prints verbose output if set to True.            </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="c"># Declare a list of acceptable file types: tif and jpg</span>
+    <span class="n">filetypes</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;.tif&#39;</span><span class="p">,</span> <span class="s">&#39;.jpg&#39;</span><span class="p">,</span> <span class="s">&#39;.jpeg&#39;</span><span class="p">,</span><span class="s">&#39;.tiff&#39;</span><span class="p">]</span>
+    <span class="c"># Make list of files in the corresponding Before and After folders</span>
+    <span class="n">befpics</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s">&#39;InputPicts/Before/Before_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="p">))</span>
+    <span class="n">aftpics</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s">&#39;InputPicts/After/After_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="p">))</span>
+    
+    <span class="c"># Make output folder if does not exist</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/PtMaps&#39;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/PtMaps&#39;</span><span class="p">)</span>
+        
+    <span class="n">Data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># fn stands for filename. befpics is a list of the filenames in the folder </span>
+    <span class="c"># containing the before pictures</span>
+    <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">befpics</span><span class="p">:</span>
+        <span class="n">filename</span><span class="p">,</span><span class="n">exten</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+	<span class="n">befpath</span> <span class="o">=</span> <span class="s">&#39;InputPicts/Before/Before_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">fn</span>
+	<span class="k">if</span> <span class="n">exten</span> <span class="ow">in</span> <span class="n">filetypes</span><span class="p">:</span>
+	    <span class="c"># Get number of current foil</span>
+            <span class="n">foilnum</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Now comparing foil </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="n">foilnum</span>
+            <span class="n">aftfoil</span> <span class="o">=</span> <span class="n">foilnum</span> <span class="o">+</span> <span class="s">&#39; after clean&#39;</span> <span class="o">+</span> <span class="n">exten</span>
+            <span class="n">aftpath</span> <span class="o">=</span> <span class="s">&#39;InputPicts/After/After_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">aftfoil</span>
+            <span class="c"># Check to see if the corresponding picture is in the after folder</span>
+            <span class="k">if</span> <span class="n">aftfoil</span> <span class="ow">in</span> <span class="n">aftpics</span><span class="p">:</span>
+                <span class="n">befImg</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">befpath</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CV_LOAD_IMAGE_GRAYSCALE</span><span class="p">)</span>
+                <span class="n">aftImg</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">aftpath</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CV_LOAD_IMAGE_GRAYSCALE</span><span class="p">)</span>
+                <span class="c"># Compare the two images:</span>
+                <span class="n">Ptvals</span><span class="p">,</span> <span class="n">PtPicts</span> <span class="o">=</span> <span class="n">MoComp</span><span class="p">(</span><span class="n">befImg</span><span class="p">,</span><span class="n">aftImg</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+		<span class="p">(</span><span class="n">PtAreabf</span><span class="p">,</span>
+		 <span class="n">PtAreaaf</span><span class="p">,</span>
+		 <span class="n">areaLoss</span><span class="p">,</span>
+		 <span class="n">Moloss</span><span class="p">,</span>
+		 <span class="n">PctMo</span><span class="p">)</span> <span class="o">=</span> <span class="n">Ptvals</span>
+		<span class="p">(</span><span class="n">Ptbef</span><span class="p">,</span> 
+		 <span class="n">Ptaft</span><span class="p">)</span> <span class="o">=</span> <span class="n">PtPicts</span>
+		
+		<span class="c"># Create the output images</span>
+		<span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/PtMaps/&#39;</span><span class="o">+</span><span class="n">foilnum</span><span class="o">+</span><span class="s">&#39; before_threshed.png&#39;</span><span class="p">,</span>\
+		 <span class="n">Ptbef</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+		<span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/PtMaps/&#39;</span><span class="o">+</span><span class="n">foilnum</span><span class="o">+</span><span class="s">&#39; after_threshed.png&#39;</span><span class="p">,</span>\
+		 <span class="n">Ptaft</span><span class="p">,</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+		 
+		<span class="c"># Write the output to a new line in the csv file</span>
+		<span class="n">Data</span><span class="p">[</span><span class="n">foilnum</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Pt Area Before (mm^2)&#39;</span><span class="p">:</span><span class="n">PtAreabf</span><span class="p">,</span> 
+		                 <span class="s">&#39;Pt Area After (mm^2)&#39;</span><span class="p">:</span><span class="n">PtAreaaf</span><span class="p">,</span> 
+                                 <span class="s">&#39;Area of Mo Loss (mm^2)&#39;</span><span class="p">:</span><span class="n">areaLoss</span><span class="p">,</span> 
+                                 <span class="s">&#39;Approx Mo Loss (micrograms)&#39;</span><span class="p">:</span><span class="nb">round</span><span class="p">(</span><span class="n">Moloss</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+                                 <span class="s">&#39;% Mo lost&#39;</span><span class="p">:</span><span class="n">PctMo</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;No after image for foil &quot;</span><span class="o">+</span><span class="n">foilnum</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Not a picture: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">filename</span>
+            
+    <span class="sd">&quot;&quot;&quot;Write results Data to a .csv file&quot;&quot;&quot;</span>
+    <span class="c"># Make dirt and Pt output csv files and corresponding writers</span>
+    <span class="n">filePath</span> <span class="o">=</span> <span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;/Mo_output_&#39;</span><span class="o">+</span><span class="n">sss</span><span class="o">+</span><span class="s">&#39;.csv&#39;</span>
+    <span class="n">PtCSV</span> <span class="o">=</span> <span class="n">gencsv</span><span class="o">.</span><span class="n">DataToCSV</span><span class="p">(</span><span class="n">filePath</span><span class="p">,</span> <span class="n">sss</span><span class="p">)</span>
+    
+    <span class="c"># Make column titles:</span>
+    <span class="n">ColHeaders</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Foil #&#39;</span><span class="p">,</span>
+                  <span class="s">&#39;Pt Area Before (mm^2)&#39;</span><span class="p">,</span> 
+                  <span class="s">&#39;Pt Area After (mm^2)&#39;</span><span class="p">,</span> 
+                  <span class="s">&#39;Area of Mo Loss (mm^2)&#39;</span><span class="p">,</span> 
+                  <span class="s">&#39;Approx Mo Loss (micrograms)&#39;</span><span class="p">,</span>
+                  <span class="s">&#39;% Mo lost&#39;</span><span class="p">]</span>
+                  
+    <span class="c"># Write the Data to the CSV file</span>
+    <span class="n">PtCSV</span><span class="o">.</span><span class="n">writeDataFromDict</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">colHeads</span><span class="o">=</span><span class="n">ColHeaders</span><span class="p">)</span>
+    <span class="n">PtCSV</span><span class="o">.</span><span class="n">closeCSVFile</span><span class="p">()</span>
+    
+    <span class="c"># Check to see if any foils have an after picture but not a before picture:</span>
+    <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">aftpics</span><span class="p">:</span>
+        <span class="n">filename</span><span class="p">,</span><span class="n">exten</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+        <span class="n">foilnum</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">beffoil</span> <span class="o">=</span> <span class="n">foilnum</span> <span class="o">+</span> <span class="s">&#39; before clean&#39;</span> <span class="o">+</span> <span class="n">exten</span>
+        <span class="k">if</span> <span class="n">exten</span> <span class="ow">in</span> <span class="n">filetypes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">beffoil</span> <span class="ow">in</span><span class="p">(</span><span class="n">befpics</span><span class="p">)):</span>
+                <span class="k">print</span> <span class="s">&quot;No before image for foil &quot;</span><span class="o">+</span> <span class="n">foilnum</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Not a picture: &quot;</span> <span class="o">+</span> <span class="n">fn</span>
+            
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="MoComp"><a class="viewcode-back" href="../../../GenSIP.cleantests.html#GenSIP.cleantests.moly.MoComp">[docs]</a><span class="k">def</span> <span class="nf">MoComp</span> <span class="p">(</span><span class="n">beforeImg</span><span class="p">,</span> <span class="n">afterImg</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the exposed platinum compare foils function. It takes the pathnames </span>
+<span class="sd">    of two images (before and after) and the image resolution, in square microns</span>
+<span class="sd">    per pixel. </span>
+<span class="sd">    </span>
+<span class="sd">    NOTE: This function assumes before and after images have the same resolution!</span>
+<span class="sd">    </span>
+<span class="sd">    MoComp returns two tuples: </span>
+<span class="sd">       -The first tuple contains the area of exposed platinum before and after </span>
+<span class="sd">        cleaning, the area of moly loss, the micrograms of moly lost, and the </span>
+<span class="sd">        approximate % of the original molybdenum lost.</span>
+<span class="sd">       -The second tuple contains the binary before and after images of the</span>
+<span class="sd">        exposed platinum used in these calculations. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">BEFDATA</span> <span class="o">=</span> <span class="n">Monalysis</span><span class="p">(</span><span class="n">beforeImg</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">PtAreaBef</span><span class="p">,</span> 
+    <span class="n">FoilAreaBef</span><span class="p">,</span> 
+    <span class="n">MolyAreaBef</span><span class="p">,</span>
+    <span class="n">MolyMassBef</span><span class="p">,</span> 
+    <span class="n">PtImgBef</span><span class="p">)</span> <span class="o">=</span> <span class="n">BEFDATA</span>
+    
+    <span class="n">AFTDATA</span> <span class="o">=</span> <span class="n">Monalysis</span><span class="p">(</span><span class="n">afterImg</span><span class="p">,</span><span class="n">res</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">PtAreaAft</span><span class="p">,</span> 
+    <span class="n">FoilAreaAft</span><span class="p">,</span> 
+    <span class="n">MolyAreaAft</span><span class="p">,</span>
+    <span class="n">MolyMassAft</span><span class="p">,</span> 
+    <span class="n">PtImgAft</span><span class="p">)</span> <span class="o">=</span> <span class="n">AFTDATA</span>
+    
+    <span class="c"># Calculate difference in area of exposed Pt:</span>
+    <span class="c"># Normalize values to the area of the before image</span>
+    <span class="n">befaftRatio</span> <span class="o">=</span> <span class="n">FoilAreaBef</span><span class="o">/</span><span class="n">FoilAreaAft</span>
+    <span class="n">areaLoss</span> <span class="o">=</span> <span class="n">PtAreaAft</span><span class="o">*</span><span class="n">befaftRatio</span><span class="o">-</span><span class="n">PtAreaBef</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Total foil area before: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">FoilAreaBef</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Total foil area after:  </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">FoilAreaAft</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Ratio of before to after: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">befaftRatio</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Mo area before: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">MolyAreaBef</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Mo area after:  </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">MolyAreaAft</span><span class="p">)</span>
+    <span class="n">pcntMolyLoss</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="p">(</span><span class="n">MolyAreaAft</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">MolyAreaBef</span><span class="p">))</span><span class="o">*</span><span class="n">befaftRatio</span>
+    <span class="n">pcntMolyLoss</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">pcntMolyLoss</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c"># Now approximate molybdenum loss:</span>
+    <span class="c"># assuming 1pixel == 1 micron</span>
+    <span class="c"># Moly thickness ~300nm = .3micron, moly density = 10.2 g/cm^3 = 10.2e-9 mg/micron^3</span>
+    <span class="n">molyLoss</span> <span class="o">=</span> <span class="n">areaLoss</span><span class="o">*.</span><span class="mi">3</span><span class="o">*</span><span class="mf">10.2</span> <span class="c">#moly loss in micrograms</span>
+    <span class="n">molyLoss</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">molyLoss</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+   	
+    <span class="c"># Convert area values to mm^2 instead of microns^2, and round:</span>
+    <span class="n">PtAreaBef</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">PtAreaBef</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">PtAreaAft</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">PtAreaAft</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">areaLoss</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">areaLoss</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    
+    <span class="c"># put all results into return tuples</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="n">PtAreaBef</span><span class="p">,</span> 
+           <span class="n">PtAreaAft</span><span class="p">,</span> 
+           <span class="n">areaLoss</span><span class="p">,</span> 
+           <span class="n">molyLoss</span><span class="p">,</span> 
+           <span class="n">pcntMolyLoss</span><span class="p">)</span>
+           
+    <span class="n">picts</span> <span class="o">=</span> <span class="p">(</span><span class="n">PtImgBef</span><span class="p">,</span> 
+             <span class="n">PtImgAft</span><span class="p">)</span>
+             
+    <span class="k">return</span> <span class="n">ret</span><span class="p">,</span> <span class="n">picts</span>
+    
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="Monalysis"><a class="viewcode-back" href="../../../GenSIP.cleantests.html#GenSIP.cleantests.moly.Monalysis">[docs]</a><span class="k">def</span> <span class="nf">Monalysis</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs molybdenum analysis on a given image. </span>
+<span class="sd">        Inputs: </span>
+<span class="sd">        - img - image as a numpy.ndarray</span>
+<span class="sd">        - res - resolution of the image in square microns/pixel</span>
+<span class="sd">        Key-Word Arguments:</span>
+<span class="sd">        - verbose = False - prints verbose output if set to True.</span>
+<span class="sd">        Returns a tuple containing:</span>
+<span class="sd">            PtArea - area of exposed platinum in square microns</span>
+<span class="sd">            MolyArea - area of the molybdenum in the image in square microns</span>
+<span class="sd">            MolyMass - mass of the molybdenum on the foil in micrograms</span>
+<span class="sd">            PtImg - the platinum thresholded image as a numpy ndarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="c"># Generate binary thresholds for Platinum:</span>
+    <span class="n">PtImg</span> <span class="o">=</span> <span class="n">isolatePt</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+    <span class="c"># Approximate the percent of molybdenum lost:</span>
+    <span class="c"># Get the approximate foil area in square millimeters</span>
+    <span class="n">FoilArea</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">getFoilArea</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c"># Calculate area of exposed platinum, adjust for resolution</span>
+    <span class="c"># Result is area in square millimeters</span>
+    <span class="n">PtArea</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">calcExposedPt</span><span class="p">(</span><span class="n">PtImg</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+    <span class="c"># Calculate difference in area of exposed Pt:</span>
+    <span class="c"># Normalize values to the area of the before image</span>
+    <span class="n">MolyArea</span> <span class="o">=</span> <span class="n">FoilArea</span><span class="o">-</span><span class="n">PtArea</span>
+    <span class="c"># Moly thickness ~300nm = .3micron, moly density = 10.2 g/cm^3 = 10.2e-9 mg/micron^3</span>
+    <span class="n">MolyMass</span> <span class="o">=</span> <span class="n">MolyArea</span><span class="o">*.</span><span class="mi">3</span><span class="o">*</span><span class="mf">10.2</span> <span class="c">#moly mass in micrograms</span>
+   	
+    <span class="c"># Convert binary images to uint8 and make all ones into 255</span>
+    <span class="n">PtImg</span> <span class="o">=</span> <span class="n">PtImg</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">PtImg</span> <span class="o">=</span> <span class="n">PtImg</span><span class="o">*</span><span class="mi">255</span>
+    
+    <span class="c"># put all results into return tuples</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="n">PtArea</span><span class="p">,</span> 
+           <span class="n">FoilArea</span><span class="p">,</span> 
+           <span class="n">MolyArea</span><span class="p">,</span> 
+           <span class="n">MolyMass</span><span class="p">,</span> 
+           <span class="n">PtImg</span><span class="p">)</span>
+           
+    <span class="k">return</span> <span class="n">ret</span>
+
+
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="isolatePt"><a class="viewcode-back" href="../../../GenSIP.cleantests.html#GenSIP.cleantests.moly.isolatePt">[docs]</a><span class="k">def</span> <span class="nf">isolatePt</span> <span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function filters and thresholds the image using regionalThres in order </span>
+<span class="sd">    to estimate the area of exposed Pt. Argument &quot;image&quot; must be ndarray.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">poster</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">makePoster</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    
+    <span class="c"># Threshold the image. This is a global threshold. There is probably a better one out there.</span>
+    <span class="n">isoPt</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">regionalThresh</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">poster</span><span class="p">,</span>
+                               <span class="n">p</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span>
+                               <span class="n">d</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+                               <span class="n">m</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span>
+                               <span class="n">pt</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span>
+                               <span class="n">gaussBlur</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                               <span class="n">MaskEdges</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                               <span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;mo&#39;</span><span class="p">,</span>
+                               <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+                               
+    <span class="c"># Make the image into a boolean image</span>
+    <span class="n">isoPt</span> <span class="o">=</span> <span class="n">isoPt</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">isoPt</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

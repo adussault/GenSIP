@@ -1,8 +1,9 @@
-# This is the main script for running GenSIP on a folder of before and after images
-#=========================================================================================
-#=====================================###SCRIPT###========================================
-#=========================================================================================
+"""
+Contains examples of how to run several of the analysis functions in GenSIP. 
+To use, just remove the block quotes from one of the scripts and run this file.
+"""
 
+#==============================================================================#
 '''
 # ANALYZING A CLEAN TEST USING THE SAMPLE SET STRING
 

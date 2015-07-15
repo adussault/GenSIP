@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.histomethod.binaryops &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.histomethod.binaryops</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains thresholding, masking, and flooding operations. Called &#39;binaryops&#39; </span>
+<span class="sd">because these functions all produce or deal with binary images.</span>
+
+<span class="sd">The flooding functions were made to try and better identify dirt particles. The</span>
+<span class="sd">idea was to threshold the image at a low threshold level to identify part of the</span>
+<span class="sd">dirt particles, and then use that threshold image as a seed for the flood procedure </span>
+<span class="sd">in order to &quot;fill out&quot; the rest of the dirt particles. </span>
+
+<span class="sd">Also includes two basic thresholding operations. </span>
+
+<span class="sd">Functions include:</span>
+<span class="sd">   floodByThresh - runs a flooding algorithm given a threshold value. Uses the image</span>
+<span class="sd">        produced by that threshold as a seed.</span>
+<span class="sd">   floodBySeed - takes a gray image and a binary image and uses the binary image </span>
+<span class="sd">        as a seed to flood fill portions of the gray image, given certain parameters</span>
+<span class="sd">   FloodStep - one step in the Flood process</span>
+<span class="sd">   threshold - thresholds an image</span>
+<span class="sd">   easythreshold - thresholds an image</span>
+<span class="sd">   </span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="floodByThresh"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.binaryops.floodByThresh">[docs]</a><span class="k">def</span> <span class="nf">floodByThresh</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">min0</span><span class="p">,</span> <span class="n">max0</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">upBound</span><span class="p">,</span> <span class="n">lowBound</span><span class="p">,</span> <span class="n">growthMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">growthMax</span><span class="o">=</span><span class="mi">10000</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    A Floodfill algorithm that takes an image and, starting with all the pixels </span>
+<span class="sd">    in a certain range, expands those regions to take in pixels with a similar </span>
+<span class="sd">    graylevel. It is meant for filling out dirt paricles when a portion of the </span>
+<span class="sd">    dirt particle is known to be dirt and another portion is not certainly dirt.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - img - the image to be flooded</span>
+<span class="sd">         - min0 - the minimum value for the initial threshold of the image</span>
+<span class="sd">         - max0 - the maximum value for the initial threshold of the image</span>
+<span class="sd">         - d - the maximum difference in pixel value that will result in a pixel</span>
+<span class="sd">            being &#39;flooded&#39; in a step.</span>
+<span class="sd">         - upBound - the uppermost graylevel that will be considered able to be </span>
+<span class="sd">            flood-filled. Should be greater than max0.</span>
+<span class="sd">         - lowBound - the lowermost graylevel that will be considered able to be </span>
+<span class="sd">            flood-filled. Should be less than min0.</span>
+<span class="sd">         </span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - growthMin - the minimum number of pixels that the Flooder is allowed </span>
+<span class="sd">            to grow in one step. Once the growth in a step is &lt;= growthMin, the </span>
+<span class="sd">            Flooder stops. </span>
+<span class="sd">         - growthMax - the maximum number of pixels that the Flooder is allowed </span>
+<span class="sd">            to grow in one step. Once the growth in a step is &gt;= growthMax, the </span>
+<span class="sd">            Flooder stops. Prevents the flooder from incoporating all </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">growthMin</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Minimum growth level must be 0 or positive.&quot;</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">threshold</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">min0</span><span class="p">,</span><span class="n">max0</span><span class="p">,</span><span class="n">Binary</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">Bool</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">growth</span> <span class="o">=</span> <span class="n">growthMin</span><span class="o">+</span><span class="mi">1</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">growthMin</span><span class="o">&lt;</span><span class="n">growth</span><span class="o">&lt;</span><span class="n">growthMax</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;Step #&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span>
+        <span class="n">ret</span><span class="p">,</span> <span class="n">growth</span> <span class="o">=</span> <span class="n">FloodStep</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">upBound</span><span class="p">,</span> <span class="n">lowBound</span><span class="p">,</span> <span class="n">growthMin</span><span class="p">,</span> <span class="n">growthMax</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="floodBySeed"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.binaryops.floodBySeed">[docs]</a><span class="k">def</span> <span class="nf">floodBySeed</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">upBound</span><span class="p">,</span> <span class="n">lowBound</span><span class="p">,</span> <span class="n">growthMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">growthMax</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    A Floodfill algorithm that takes an image and, starting with all the pixels </span>
+<span class="sd">    in a certain range, expands those regions to take in pixels with a similar </span>
+<span class="sd">    graylevel. It is meant for filling out dirt paricles when a portion of the </span>
+<span class="sd">    dirt particle is known to be dirt and another portion is not certainly dirt.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - img - the image to be flooded</span>
+<span class="sd">         - seed - a binary image that sets the starting point for the flooder</span>
+<span class="sd">         - d - the maximum difference in pixel value that will result in a pixel</span>
+<span class="sd">            being &#39;flooded&#39; in a step.</span>
+<span class="sd">         - upBound - the uppermost graylevel that will be considered able to be </span>
+<span class="sd">            flood-filled. Should be greater than max0.</span>
+<span class="sd">         - lowBound - the lowermost graylevel that will be considered able to be </span>
+<span class="sd">            flood-filled. Should be less than min0.</span>
+<span class="sd">         </span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - growthMin - the minimum number of pixels that the Flooder is allowed </span>
+<span class="sd">            to grow in one step. Once the growth in a step is &lt;= growthMin, the </span>
+<span class="sd">            Flooder stops. </span>
+<span class="sd">         - growthMax - the maximum number of pixels that the Flooder is allowed </span>
+<span class="sd">            to grow in one step. Once the growth in a step is &gt;= growthMax, the </span>
+<span class="sd">            Flooder stops. Prevents the flooder from incoporating all </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">growthMin</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Minimum growth level must be 0 or positive.&quot;</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">seed</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">growth</span> <span class="o">=</span> <span class="n">growthMin</span><span class="o">+</span><span class="mi">1</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">growthMin</span><span class="o">&lt;</span><span class="n">growth</span><span class="o">&lt;</span><span class="n">growthMax</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Step #&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span>
+        <span class="n">ret</span><span class="p">,</span> <span class="n">growth</span> <span class="o">=</span> <span class="n">FloodStep</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">upBound</span><span class="p">,</span> <span class="n">lowBound</span><span class="p">,</span> \
+        <span class="n">growthMin</span><span class="o">=</span><span class="n">growthMin</span><span class="p">,</span> <span class="n">growthMax</span><span class="o">=</span><span class="n">growthMax</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="FloodStep"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.binaryops.FloodStep">[docs]</a><span class="k">def</span> <span class="nf">FloodStep</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">upBound</span><span class="p">,</span> <span class="n">lowBound</span><span class="p">,</span> <span class="n">growthMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">growthMax</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Does one step of the flooding process by looking at the nearest neighbors of</span>
+<span class="sd">    the seed pixels (pixels that are already flooded) and adding those that have </span>
+<span class="sd">    pixel values within d to the flooded pixels.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - img - image over which the flood step is performed</span>
+<span class="sd">         - seed - a binary (black &amp; white) image where all the white pixels are</span>
+<span class="sd">            the initial, already flooded, </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">seed</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">imask</span><span class="p">,</span><span class="n">jmask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span><span class="c">#old: ((img&gt;=min0)&amp;(img&lt;=max0))</span>
+    <span class="n">imask</span><span class="p">,</span><span class="n">jmask</span> <span class="o">=</span> <span class="n">imask</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span><span class="n">jmask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c">#Make writable</span>
+    <span class="c">#ret = np.zeros(img.shape).astype(np.bool_)</span>
+    <span class="c">#ret[imask,jmask] = True</span>
+    <span class="n">ni</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">nj</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">growth</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">di</span> <span class="ow">in</span> <span class="n">ni</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">dj</span> <span class="ow">in</span> <span class="n">nj</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">((</span><span class="n">di</span><span class="o">==</span><span class="n">dj</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">di</span><span class="o">==</span><span class="mi">0</span><span class="p">)):</span>
+                <span class="n">iself</span> <span class="o">=</span> <span class="n">imask</span>
+                <span class="n">jself</span> <span class="o">=</span> <span class="n">jmask</span>
+                <span class="n">ineigh</span> <span class="o">=</span> <span class="n">imask</span> <span class="o">+</span> <span class="n">di</span>
+                <span class="n">jneigh</span> <span class="o">=</span> <span class="n">jmask</span> <span class="o">+</span> <span class="n">dj</span>
+                <span class="c"># Check the Borders:</span>
+                <span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">,</span><span class="n">iself</span><span class="p">,</span><span class="n">jself</span> <span class="o">=</span> \
+                <span class="n">ineigh</span><span class="p">[(</span><span class="n">ineigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">ineigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>\
+                <span class="n">jneigh</span><span class="p">[(</span><span class="n">ineigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">ineigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>\
+                <span class="n">iself</span><span class="p">[(</span><span class="n">ineigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">ineigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>\
+                <span class="n">jself</span><span class="p">[(</span><span class="n">ineigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">ineigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">&amp;</span><span class="p">(</span><span class="n">jneigh</span><span class="o">&lt;</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                
+                <span class="c"># Eliminate pixels that are already counted</span>
+                <span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">,</span><span class="n">iself</span><span class="p">,</span><span class="n">jself</span> <span class="o">=</span> \
+                <span class="n">ineigh</span><span class="p">[</span><span class="n">seed</span><span class="p">[</span><span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">]</span><span class="o">==</span><span class="bp">False</span><span class="p">],</span>\
+                <span class="n">jneigh</span><span class="p">[</span><span class="n">seed</span><span class="p">[</span><span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">]</span><span class="o">==</span><span class="bp">False</span><span class="p">],</span>\
+                <span class="n">iself</span><span class="p">[</span><span class="n">seed</span><span class="p">[</span><span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">]</span><span class="o">==</span><span class="bp">False</span><span class="p">],</span>\
+                <span class="n">jself</span><span class="p">[</span><span class="n">seed</span><span class="p">[</span><span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">]</span><span class="o">==</span><span class="bp">False</span><span class="p">]</span>
+                <span class="c">#print str(img[ineigh,jneigh])</span>
+                
+                <span class="c"># Compare values of pixels and neighbor pixels</span>
+                <span class="n">selfVals</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="n">iself</span><span class="p">,</span><span class="n">jself</span><span class="p">]</span>
+                <span class="n">neighVals</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="n">ineigh</span><span class="p">,</span><span class="n">jneigh</span><span class="p">]</span>
+                
+                <span class="c"># Calculate the absolute difference between the pixel and its neighbors.</span>
+                <span class="c"># First convert to integer to prevent overflow of the 8-bit </span>
+                <span class="c"># unsigned pixel values, then convert back to uint8</span>
+                <span class="n">absdiff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">selfVals</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span><span class="o">-</span><span class="n">neighVals</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+                <span class="c"># Get i,j indices of qualifying neighbors</span>
+                <span class="n">iquals</span> <span class="o">=</span> <span class="n">ineigh</span><span class="p">[(</span><span class="n">absdiff</span><span class="o">&lt;=</span><span class="n">d</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">neighVals</span><span class="o">&lt;=</span><span class="n">upBound</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">neighVals</span><span class="o">&gt;=</span><span class="n">lowBound</span><span class="p">)]</span>
+                <span class="n">jquals</span> <span class="o">=</span> <span class="n">jneigh</span><span class="p">[(</span><span class="n">absdiff</span><span class="o">&lt;=</span><span class="n">d</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">neighVals</span><span class="o">&lt;=</span><span class="n">upBound</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">neighVals</span><span class="o">&gt;=</span><span class="n">lowBound</span><span class="p">)]</span>
+                <span class="c"># increase growth by the number of qualifying neighbors</span>
+                <span class="n">growth</span> <span class="o">+=</span> <span class="n">iquals</span><span class="o">.</span><span class="n">size</span>
+                
+                <span class="c">#print str(img[iquals,jquals])</span>
+                
+                <span class="c"># set qualifying neighbors in return image to True</span>
+                <span class="n">ret</span><span class="p">[</span><span class="n">iquals</span><span class="p">,</span><span class="n">jquals</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>           
+        <span class="k">print</span> <span class="s">&quot;  Growth: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">growth</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;  Less than max? &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">growth</span><span class="o">&lt;</span><span class="n">growthMax</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;  More than min? &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">growth</span><span class="o">&gt;</span><span class="n">growthMin</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span><span class="p">,</span> <span class="n">growth</span>
+</div>
+<div class="viewcode-block" id="threshold"><a class="viewcode-back" href="../../../GenSIP.histomethod.html#GenSIP.histomethod.binaryops.threshold">[docs]</a><span class="k">def</span> <span class="nf">threshold</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">MIN</span><span class="p">,</span><span class="n">MAX</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span><span class="n">Binary</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">Bool</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A home made simple thresholding function. Not as robust as the one in opencv</span>
+<span class="sd">    since it only has one straightforward thresholding method, and doesn&#39;t have</span>
+<span class="sd">    all the options as in opencv. But it works.</span>
+<span class="sd">    Returns a thresholded image of either type np.uint8 or bo</span>
+<span class="sd">    Inputs are:</span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            </span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - MAX - The maximum value of the threshold. Default set to 255.</span>
+<span class="sd">         - Binary - Option to output a black and white uint8 image, with black </span>
+<span class="sd">            set to 0 and white set to 255</span>
+<span class="sd">        - Boolean - Option to set the output image to np.bool_ type, which means</span>
+<span class="sd">            that black will be 0 (or False) and white would be 1 (or True).</span>
+<span class="sd">    </span>
+<span class="sd">    A nice student project would be to get this thresholding method working for </span>
+<span class="sd">    RGB images. It is low priority though since we deal with grayscale images.</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+        <span class="n">ret</span><span class="p">[</span><span class="n">ret</span><span class="o">&lt;</span><span class="n">MIN</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ret</span><span class="p">[</span><span class="n">ret</span><span class="o">&gt;</span><span class="n">MAX</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">Binary</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">Bool</span><span class="p">:</span>
+                <span class="n">ret</span><span class="o">=</span><span class="n">ret</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+                <span class="n">ret</span><span class="p">[</span><span class="n">ret</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ret</span><span class="p">[</span><span class="n">ret</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+        <span class="k">return</span> <span class="n">ret</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span> <span class="ow">and</span> <span class="n">ret</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;I only deal with grayscale images for now&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

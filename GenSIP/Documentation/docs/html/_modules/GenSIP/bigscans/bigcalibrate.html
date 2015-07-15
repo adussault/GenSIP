@@ -1,0 +1,457 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.bigscans.bigcalibrate &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.bigscans.bigcalibrate</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">GenSIP.bigscans.bigfoils</span> <span class="kn">as</span> <span class="nn">bf</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">gethostname</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+
+<div class="viewcode-block" id="threshPrec"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.bigcalibrate.threshPrec">[docs]</a><span class="k">def</span> <span class="nf">threshPrec</span><span class="p">(</span><span class="n">panFolder</span><span class="p">,</span><span class="n">maskFolder</span><span class="p">,</span> <span class="n">MoDirt</span><span class="o">=</span><span class="s">&quot;Mo&quot;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method is used to examine the error of analyzeMo and analyzeDirt</span>
+<span class="sd">    due to variations in the threshold level. It produces a series of graphs </span>
+<span class="sd">    depicting the variation of the calculated molybdenum loss or dirt loss with </span>
+<span class="sd">    the threshold levels in the regionalThresh.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">            - sss: The Sample Set String of input pictures to examine, just as in</span>
+<span class="sd">            - Domain: An integer that gives the length of the threshold domain </span>
+<span class="sd">                over which to plot the output values. (Sorry that is terribly </span>
+<span class="sd">                explained. Its the length of the x-axis in the output plot.) </span>
+<span class="sd">            - step: Step length over the Domain. Default set to 2</span>
+<span class="sd">            - MoDirt: string variable designating whether to examine analyseMo or</span>
+<span class="sd">                analyzeDirt. Allowable values are:</span>
+<span class="sd">                    - Moly Analysis: &quot;Mo&quot;,&quot;Moly&quot;,&quot;moly&quot;,&quot;molybdenum&quot;,&quot;Molybdenum&quot;,&quot;M&quot;,&quot;m&quot;</span>
+<span class="sd">                    - Dirt Analysis: &quot;Dirt&quot;,&quot;dirt&quot;,&quot;D&quot;,&quot;d&quot;</span>
+<span class="sd">            - RUN: a tuple describing which regions you want to vary the threshold</span>
+<span class="sd">                value over. Regions that are not in the RUN tuple will be kept </span>
+<span class="sd">                constant at their start value (below). </span>
+<span class="sd">            - Pstart, Dstart, Mstart, Ptstart: The values at which to start the </span>
+<span class="sd">                threshold domain. </span>
+<span class="sd">            </span>
+<span class="sd">            </span>
+<span class="sd">    For Mo analysis:</span>
+<span class="sd">        Pstart=90,Dstart=120,Mstart=180,Ptstart=180</span>
+<span class="sd">    For dirt analysis:</span>
+<span class="sd">        Pstart=8,Dstart=28,Mstart=55,Ptstart=60</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Get kwargs:</span>
+    <span class="n">foilname</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;foilname&quot;</span><span class="p">,</span><span class="s">&quot;40360_2&quot;</span><span class="p">)</span>
+    <span class="n">Quarter</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;quarter&quot;</span><span class="p">,</span><span class="s">&quot;Q1&quot;</span><span class="p">)</span>
+    <span class="n">Domain</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;domain&quot;</span><span class="p">,</span><span class="mi">40</span><span class="p">)</span>
+    <span class="n">step</span><span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;step&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">RUN</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;RUN&quot;</span><span class="p">,(</span><span class="s">&quot;P&quot;</span><span class="p">,</span><span class="s">&quot;D&quot;</span><span class="p">,</span><span class="s">&quot;M&quot;</span><span class="p">,</span><span class="s">&quot;hE&quot;</span><span class="p">,</span><span class="s">&quot;Pt&quot;</span><span class="p">))</span>
+    <span class="n">Pstart</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Pstart&quot;</span><span class="p">,</span><span class="mi">130</span><span class="p">)</span>
+    <span class="n">Dstart</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Dstart&quot;</span><span class="p">,</span><span class="mi">160</span><span class="p">)</span>
+    <span class="n">Mstart</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Mstart&quot;</span><span class="p">,</span><span class="mi">190</span><span class="p">)</span>
+    <span class="n">hEstart</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;hEstart&quot;</span><span class="p">,</span><span class="mi">230</span><span class="p">)</span>
+    <span class="n">Ptstart</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Ptstart&quot;</span><span class="p">,</span><span class="mi">240</span><span class="p">)</span>
+    <span class="n">res</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;res&quot;</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="c"># Create arrays for the plot:</span>
+    <span class="n">numpoints</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">Domain</span><span class="o">/</span><span class="n">step</span><span class="p">)</span>
+    
+    <span class="c"># The x-axis will start at Mstart, since that is typically the most dominant</span>
+    <span class="c"># region of the foil:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">Mstart</span><span class="p">,</span><span class="n">Mstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+    
+    <span class="c"># Set up domain in different regions:</span>
+    <span class="k">if</span> <span class="s">&quot;P&quot;</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">Pstart</span><span class="p">,</span><span class="n">Pstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">P</span><span class="p">[</span><span class="n">P</span><span class="o">&gt;</span><span class="mi">255</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">P</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Pstart</span>
+        
+    <span class="k">if</span> <span class="s">&quot;D&quot;</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">Dstart</span><span class="p">,</span><span class="n">Dstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">D</span><span class="p">[</span><span class="n">D</span><span class="o">&gt;</span><span class="mi">255</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">D</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Dstart</span>
+        
+    <span class="k">if</span> <span class="s">&quot;M&quot;</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">Mstart</span><span class="p">,</span><span class="n">Mstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">M</span><span class="p">[</span><span class="n">M</span><span class="o">&gt;</span><span class="mi">255</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">M</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Mstart</span>
+        
+    <span class="k">if</span> <span class="s">&quot;hE&quot;</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">hE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">hEstart</span><span class="p">,</span><span class="n">hEstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">hE</span><span class="p">[</span><span class="n">hE</span><span class="o">&gt;</span><span class="mi">255</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">hE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">hE</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">hEstart</span>
+        
+    <span class="k">if</span> <span class="s">&quot;Pt&quot;</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">Pt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">Ptstart</span><span class="p">,</span><span class="n">Ptstart</span><span class="o">+</span><span class="n">Domain</span><span class="p">,</span> <span class="n">numpoints</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">Pt</span><span class="p">[</span><span class="n">Pt</span><span class="o">&gt;</span><span class="mi">255</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Pt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">Pt</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">Ptstart</span>
+        
+
+        
+        
+    <span class="c"># Generate plot subtitle:</span>
+    <span class="n">subtitle</span> <span class="o">=</span> <span class="s">&quot;varies &quot;</span>
+    <span class="n">Startstring</span> <span class="o">=</span> <span class="s">&quot;from: &quot;</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;P&quot;</span><span class="p">:</span><span class="n">Pstart</span><span class="p">,</span><span class="s">&quot;D&quot;</span><span class="p">:</span><span class="n">Dstart</span><span class="p">,</span><span class="s">&quot;M&quot;</span><span class="p">:</span><span class="n">Mstart</span><span class="p">,</span> <span class="s">&quot;hE&quot;</span><span class="p">:</span><span class="n">hEstart</span><span class="p">,</span><span class="s">&quot;Pt&quot;</span><span class="p">:</span><span class="n">Ptstart</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">RUN</span><span class="p">:</span>
+        <span class="n">subtitle</span> <span class="o">=</span> <span class="n">r</span> <span class="o">+</span><span class="s">&quot;, &quot;</span> <span class="o">+</span> <span class="n">subtitle</span>
+        <span class="n">Startstring</span> <span class="o">=</span> <span class="n">Startstring</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">starts</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">r</span><span class="p">))</span><span class="o">+</span><span class="s">&quot;, &quot;</span>
+    <span class="n">End</span> <span class="o">=</span> <span class="s">&quot;Constant: &quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">starts</span><span class="p">:</span>
+        <span class="n">End</span> <span class="o">=</span> <span class="n">End</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s">&quot; at &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">starts</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">+</span><span class="s">&quot;, &quot;</span>
+    <span class="n">Startstring</span> <span class="o">=</span> <span class="n">Startstring</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;. &quot;</span> <span class="o">+</span> <span class="n">End</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;.&quot;</span>
+    <span class="n">subtitle</span> <span class="o">=</span> <span class="n">subtitle</span> <span class="o">+</span> <span class="n">Startstring</span>
+        
+        
+    <span class="c">#print &quot;All runners right size?  &quot; + str(P.size==D.size==M.size==Pt.size)</span>
+    
+    <span class="c"># Declare a list of acceptable file types: tif and jpg</span>
+    <span class="n">filetypes</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;.tif&#39;</span><span class="p">,</span> <span class="s">&#39;.jpg&#39;</span><span class="p">,</span> <span class="s">&#39;.jpeg&#39;</span><span class="p">,</span><span class="s">&#39;.tiff&#39;</span><span class="p">,</span><span class="s">&#39;.png&#39;</span><span class="p">]</span>
+    <span class="c"># Make list of files in the corresponding Before and After folders</span>
+    <span class="n">panSubs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">panFolder</span><span class="p">)</span>
+    <span class="n">maskSubs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">maskFolder</span><span class="p">)</span>
+    
+    <span class="c"># Make output folder if does not exist</span>
+    <span class="n">outFolder</span> <span class="o">=</span> <span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">Quarter</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outFolder</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outFolder</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="p">)</span>
+    
+    
+    <span class="n">allowableMo</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;Mo&quot;</span><span class="p">,</span><span class="s">&quot;Moly&quot;</span><span class="p">,</span><span class="s">&quot;moly&quot;</span><span class="p">,</span><span class="s">&quot;molybdenum&quot;</span><span class="p">,</span><span class="s">&quot;Molybdenum&quot;</span><span class="p">,</span><span class="s">&quot;M&quot;</span><span class="p">,</span><span class="s">&quot;m&quot;</span><span class="p">)</span>
+    <span class="n">allowableDirt</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;Dirt&quot;</span><span class="p">,</span><span class="s">&quot;dirt&quot;</span><span class="p">,</span><span class="s">&quot;D&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">)</span>
+    
+    <span class="c"># Create a Dictionary to store the data:</span>
+    <span class="n">datestring</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">getDateString</span><span class="p">()</span>
+    <span class="n">datestring</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">gethostname</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">Version</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">getGenSIPVersion</span><span class="p">()</span>
+    
+    <span class="n">Data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&quot;Date&quot;</span><span class="p">:</span><span class="n">datestring</span><span class="p">,</span><span class="s">&quot;Host&quot;</span><span class="p">:</span><span class="n">host</span><span class="p">,</span> 
+    <span class="s">&quot;Version&quot;</span><span class="p">:</span><span class="n">Version</span><span class="p">,</span><span class="s">&quot;Analysis&quot;</span><span class="p">:</span><span class="n">MoDirt</span><span class="p">,</span><span class="s">&quot;Domain&quot;</span><span class="p">:</span><span class="n">x</span><span class="p">,</span>
+    <span class="s">&quot;SETTINGS&quot;</span><span class="p">:{</span><span class="s">&quot;RUN&quot;</span><span class="p">:</span><span class="n">RUN</span><span class="p">,</span><span class="s">&quot;Pstart&quot;</span><span class="p">:</span><span class="n">Pstart</span><span class="p">,</span><span class="s">&quot;Dstart&quot;</span><span class="p">:</span><span class="n">Dstart</span><span class="p">,</span><span class="s">&quot;Mstart&quot;</span><span class="p">:</span><span class="n">Mstart</span><span class="p">,</span>\
+    <span class="s">&quot;hEstart&quot;</span><span class="p">:</span><span class="n">hEstart</span><span class="p">,</span> <span class="s">&quot;Ptstart&quot;</span><span class="p">:</span><span class="n">Ptstart</span><span class="p">},</span>
+    <span class="s">&quot;DATA&quot;</span><span class="p">:{}</span>
+    <span class="p">}</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&quot;Domain&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+    
+    
+ 
+                
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span>
+    <span class="n">y3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numpoints</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="n">MoDirt</span> <span class="ow">in</span> <span class="n">allowableMo</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numpoints</span><span class="p">):</span>
+            <span class="n">t1</span><span class="o">=</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">BIGanalyzeMoly</span><span class="p">(</span><span class="n">panSubs</span><span class="p">,</span><span class="n">panFolder</span><span class="p">,</span> <span class="n">maskFolder</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>\
+            <span class="n">M</span><span class="o">=</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">HE</span><span class="o">=</span><span class="n">hE</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">Pt</span><span class="o">=</span><span class="n">Pt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">I</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">,</span><span class="n">res</span><span class="o">=</span><span class="n">res</span><span class="p">)</span>
+            <span class="n">totFoilArea</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">totPtArea</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c">#PerPtLoss = (Ptbef-Ptaft)/Ptbef</span>
+            <span class="n">PercPt</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="n">y1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">PercPt</span>
+            <span class="n">y2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">totFoilArea</span>
+            <span class="n">y3</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">totPtArea</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t1</span>
+            <span class="n">convTime</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
+            
+        
+        <span class="c"># MAKE PLOT </span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Analysis&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;</span><span class="si">% E</span><span class="s">xposed Pt&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Mo Threshold plot.png&quot;</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Percent Pt plot for &quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Analysis&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y2</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y3</span><span class="p">,</span> <span class="s">&quot;-bo&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&quot;Foil Area&quot;</span><span class="p">,</span><span class="s">&quot;Pt Area&quot;</span><span class="p">],</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Area (cm^2)&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y2</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y3</span><span class="p">))</span> <span class="o">-</span> <span class="mi">5</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y2</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y3</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Pt area plot.png&quot;</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Pt area plot for &quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Derivative&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">grad1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">y1</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">grad2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">y2</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">grad1</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&quot;Deriv Dirt loss by count&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">grad2</span><span class="p">,</span> <span class="s">&quot;-bo&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Deriv Dirt loss by area&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&quot;Deriv mass Mo Lost&quot;</span><span class="p">,</span><span class="s">&quot;Deriv % Mo Loss&quot;</span><span class="p">],</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;dy/dx&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">grad1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">grad2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">5</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">grad1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">grad2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Mo Gradient plot.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">Data</span><span class="p">[</span><span class="s">&quot;DATA&quot;</span><span class="p">][</span><span class="n">foilname</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;PercPt&quot;</span><span class="p">:</span><span class="n">y1</span><span class="p">,</span><span class="s">&quot;AreaFoil&quot;</span><span class="p">:</span><span class="n">y2</span><span class="p">,</span><span class="s">&quot;AreaPt&quot;</span><span class="p">:</span><span class="n">y3</span><span class="p">,</span><span class="s">&quot;percGrad&quot;</span><span class="p">:</span><span class="n">grad1</span><span class="p">,</span><span class="s">&quot;AreaGrad&quot;</span><span class="p">:</span><span class="n">grad2</span><span class="p">}</span>
+        
+        <span class="k">print</span> <span class="s">&quot;Moly gradient plot for &quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+                    
+    <span class="k">elif</span> <span class="n">MoDirt</span> <span class="ow">in</span> <span class="n">allowableDirt</span><span class="p">:</span> <span class="c">###&lt;----------NOT YET USABLE</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numpoints</span><span class="p">):</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">CaldirtComp</span><span class="p">(</span><span class="n">befpath</span><span class="p">,</span> <span class="n">aftpath</span><span class="p">,</span><span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">D</span><span class="o">=</span><span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">M</span><span class="o">=</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">Pt</span><span class="o">=</span><span class="n">Pt</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">numBef</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">numAft</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">areaBef</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">areaAft</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">percNum</span> <span class="o">=</span> <span class="mi">100</span><span class="o">*</span><span class="p">(</span><span class="n">numBef</span><span class="o">-</span><span class="n">numAft</span><span class="p">)</span><span class="o">/</span><span class="n">numBef</span>
+            <span class="n">percArea</span> <span class="o">=</span> <span class="mi">100</span><span class="o">*</span><span class="p">(</span><span class="n">areaBef</span><span class="o">-</span><span class="n">areaAft</span><span class="p">)</span><span class="o">/</span><span class="n">areaBef</span>
+            <span class="n">y1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">percNum</span>
+            <span class="n">y2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">percArea</span>
+        <span class="k">print</span> <span class="s">&quot;Dirt plot for &quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Analysis&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&quot;Dirt loss by count&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y2</span><span class="p">,</span> <span class="s">&quot;-bo&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Dirt loss by area&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&quot;Dirt loss by count&quot;</span><span class="p">,</span><span class="s">&quot;Dirt loss by area&quot;</span><span class="p">],</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Percent&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">++</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Dirt Threshold plot.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Derivative&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">grad1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">y1</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">grad2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">y2</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">grad1</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">grad2</span><span class="p">,</span> <span class="s">&quot;-bo&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&quot;Deriv Dirt loss by count&quot;</span><span class="p">,</span><span class="s">&quot;Deriv Dirt loss by area&quot;</span><span class="p">],</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;dy/dx&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">grad1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">grad2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">grad1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">grad2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Dirt Gradient plot.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot; Analysis&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">subtitle</span><span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="s">&quot;-ro&quot;</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s">&quot;Dirt loss by count&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y2</span><span class="p">,</span> <span class="s">&quot;-bo&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;Dirt loss by area&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s">&quot;Dirt loss by count&quot;</span><span class="p">,</span><span class="s">&quot;Dirt loss by area&quot;</span><span class="p">],</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Threshold Values&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Percent&quot;</span><span class="p">)</span>
+        <span class="c">#Set Max and min of the y axis:</span>
+        <span class="n">minY</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">maxY</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y2</span><span class="p">))</span> <span class="o">+</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">minY</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minY</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpoints</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span><span class="n">minY</span><span class="p">,</span> <span class="n">maxY</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot; Dirt Threshold plot.png&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s"> MoDirt must be one of the following: </span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span>\
+        <span class="nb">str</span><span class="p">(</span><span class="n">allowableMo</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s"> - - - - - or - - - - - </span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">allowableDirt</span><span class="p">))</span>
+
+    <span class="c"># Get the run time of the function and add it to the dictionary &quot;Data&quot;:</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t1</span>
+    <span class="n">Data</span><span class="p">[</span><span class="s">&quot;TimeEllapse&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">convTime</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
+    <span class="c"># Serialize the &quot;Data&quot; dictionary and store it in a pickle file with the other images. </span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="s">&#39;/Plots/&#39;</span><span class="o">+</span><span class="s">&#39;Threshold_Data_&#39;</span><span class="o">+</span><span class="n">MoDirt</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">Domain</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">datestring</span><span class="p">,</span><span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Data</span><span class="p">,</span><span class="n">f</span><span class="p">)</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="BIGanalyzeMoly"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.bigcalibrate.BIGanalyzeMoly">[docs]</a><span class="k">def</span> <span class="nf">BIGanalyzeMoly</span><span class="p">(</span><span class="n">panSubs</span><span class="p">,</span><span class="n">panFolder</span><span class="p">,</span><span class="n">maskFolder</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span><span class="n">D</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span><span class="n">M</span><span class="o">=</span><span class="mi">210</span><span class="p">,</span><span class="n">HE</span><span class="o">=</span><span class="mi">253</span><span class="p">,</span><span class="n">Pt</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span><span class="n">I</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="n">MoDirt</span><span class="o">=</span><span class="s">&#39;Mo&#39;</span><span class="p">,</span><span class="n">res</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="n">panSubs</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">panFolder</span><span class="p">)</span>
+    <span class="n">panSubs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">panSubs</span> <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;sub_&quot;</span><span class="p">)]</span>
+    <span class="n">panSubs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">panSubs</span> <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&quot;.tif&quot;</span><span class="p">)]</span>
+    <span class="n">totPtArea</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">totFoilArea</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">panSubs</span><span class="p">:</span>
+        <span class="n">root</span><span class="p">,</span><span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+        
+        <span class="c"># Create the threshholded image</span>
+        <span class="n">subImage</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">panFolder</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">sub</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">subMask</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">maskFolder</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">sub</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">bigPostPreProc</span><span class="p">(</span><span class="n">subImage</span><span class="p">)</span>
+        <span class="n">poster</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">bigPosterfy</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+        <span class="n">threshed</span> <span class="o">=</span> <span class="n">bf</span><span class="o">.</span><span class="n">bigRegionalThresh</span><span class="p">(</span><span class="n">subImage</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span><span class="n">Mask</span><span class="o">=</span><span class="n">subMask</span><span class="p">,</span>\
+        <span class="n">p</span><span class="o">=</span><span class="n">P</span><span class="p">,</span><span class="n">d</span><span class="o">=</span><span class="n">D</span><span class="p">,</span><span class="n">m</span><span class="o">=</span><span class="n">M</span><span class="p">,</span><span class="n">hE</span><span class="o">=</span><span class="n">HE</span><span class="p">,</span><span class="n">pt</span><span class="o">=</span><span class="n">Pt</span><span class="p">,</span><span class="n">MoDirt</span><span class="o">=</span><span class="n">MoDirt</span><span class="p">)</span>
+        <span class="n">threshed</span> <span class="o">=</span> <span class="n">threshed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+        
+        <span class="c"># Get amount of exposed Platinum:</span>
+        
+        <span class="n">PixPt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">threshed</span><span class="p">)</span>
+        <span class="n">AreaPt</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">PixPt</span><span class="o">*</span><span class="n">res</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">PixFoil</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">subMask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span>
+        <span class="n">AreaFoil</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">PixFoil</span><span class="o">*</span><span class="n">res</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">AreaFoil</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">PercPt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">PercPt</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">AreaPt</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">AreaFoil</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="c"># Make output image</span>
+        <span class="n">threshed</span><span class="o">=</span><span class="n">threshed</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">*</span><span class="mi">255</span>
+        
+        <span class="n">totPtArea</span> <span class="o">=</span> <span class="n">totPtArea</span> <span class="o">+</span> <span class="n">AreaPt</span>
+        <span class="n">totFoilArea</span> <span class="o">=</span> <span class="n">totFoilArea</span> <span class="o">+</span> <span class="n">AreaFoil</span>
+        <span class="k">del</span><span class="p">(</span><span class="n">threshed</span><span class="p">)</span>
+        
+    <span class="n">totPtArea</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">totPtArea</span><span class="p">)</span><span class="o">/</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">totFoilArea</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">totFoilArea</span><span class="p">)</span><span class="o">/</span><span class="mi">100</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">totFoilArea</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">PercPt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">PercPt</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">totPtArea</span><span class="o">/</span><span class="n">totFoilArea</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;Point&quot;</span><span class="o">+</span><span class="n">I</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">totFoilArea</span><span class="p">,</span><span class="n">totPtArea</span><span class="p">,</span><span class="n">PercPt</span><span class="p">)</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="convTime"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.bigcalibrate.convTime">[docs]</a><span class="k">def</span> <span class="nf">convTime</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="n">mins</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">seconds</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="o">%</span><span class="mi">60</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="n">mins</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;mins &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">seconds</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;secs&quot;</span>
+    
+<span class="c">#Q1 = fun.loadImg(&quot;InputPicts/FoilScans/Q1/panorama.tif&quot;,0)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

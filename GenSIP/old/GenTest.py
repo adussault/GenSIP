@@ -1,6 +1,8 @@
+"""
 # GenTest is a module containing functions for testing out the functions in 
 # GenSIP on a given folder of test images. 
-
+Abandoned.
+"""
 
 import os
 import cv2

@@ -1,0 +1,822 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.histomethod package &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="index.html" />
+    <link rel="up" title="GenSIP package" href="GenSIP.html" />
+    <link rel="prev" title="GenSIP.cleantests package" href="GenSIP.cleantests.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gensip-histomethod-package">
+<h1>GenSIP.histomethod package<a class="headerlink" href="#gensip-histomethod-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-GenSIP.histomethod.binaryops">
+<span id="gensip-histomethod-binaryops-module"></span><h2>GenSIP.histomethod.binaryops module<a class="headerlink" href="#module-GenSIP.histomethod.binaryops" title="Permalink to this headline">¶</a></h2>
+<p>Contains thresholding, masking, and flooding operations. Called &#8216;binaryops&#8217; 
+because these functions all produce or deal with binary images.</p>
+<p>The flooding functions were made to try and better identify dirt particles. The
+idea was to threshold the image at a low threshold level to identify part of the
+dirt particles, and then use that threshold image as a seed for the flood procedure 
+in order to &#8220;fill out&#8221; the rest of the dirt particles.</p>
+<p>Also includes two basic thresholding operations.</p>
+<dl class="docutils">
+<dt>Functions include:</dt>
+<dd><dl class="first docutils">
+<dt>floodByThresh - runs a flooding algorithm given a threshold value. Uses the image</dt>
+<dd>produced by that threshold as a seed.</dd>
+<dt>floodBySeed - takes a gray image and a binary image and uses the binary image </dt>
+<dd>as a seed to flood fill portions of the gray image, given certain parameters</dd>
+</dl>
+<p class="last">FloodStep - one step in the Flood process
+threshold - thresholds an image
+easythreshold - thresholds an image</p>
+</dd>
+</dl>
+<dl class="function">
+<dt id="GenSIP.histomethod.binaryops.FloodStep">
+<code class="descclassname">GenSIP.histomethod.binaryops.</code><code class="descname">FloodStep</code><span class="sig-paren">(</span><em>img</em>, <em>seed</em>, <em>d</em>, <em>upBound</em>, <em>lowBound</em>, <em>growthMin=0</em>, <em>growthMax=1000</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/binaryops.html#FloodStep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.binaryops.FloodStep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does one step of the flooding process by looking at the nearest neighbors of
+the seed pixels (pixels that are already flooded) and adding those that have 
+pixel values within d to the flooded pixels.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last">
+<li><p class="first">img - image over which the flood step is performed</p>
+</li>
+<li><dl class="first docutils">
+<dt>seed - a binary (black &amp; white) image where all the white pixels are</dt>
+<dd><p class="first last">the initial, already flooded,</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.binaryops.floodBySeed">
+<code class="descclassname">GenSIP.histomethod.binaryops.</code><code class="descname">floodBySeed</code><span class="sig-paren">(</span><em>img</em>, <em>seed</em>, <em>d</em>, <em>upBound</em>, <em>lowBound</em>, <em>growthMin=0</em>, <em>growthMax=10000</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/binaryops.html#floodBySeed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.binaryops.floodBySeed" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Floodfill algorithm that takes an image and, starting with all the pixels 
+in a certain range, expands those regions to take in pixels with a similar 
+graylevel. It is meant for filling out dirt paricles when a portion of the 
+dirt particle is known to be dirt and another portion is not certainly dirt.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last">
+<li><p class="first">img - the image to be flooded</p>
+</li>
+<li><p class="first">seed - a binary image that sets the starting point for the flooder</p>
+</li>
+<li><dl class="first docutils">
+<dt>d - the maximum difference in pixel value that will result in a pixel</dt>
+<dd><p class="first last">being &#8216;flooded&#8217; in a step.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>upBound - the uppermost graylevel that will be considered able to be </dt>
+<dd><p class="first last">flood-filled. Should be greater than max0.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>lowBound - the lowermost graylevel that will be considered able to be </dt>
+<dd><p class="first last">flood-filled. Should be less than min0.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>growthMin - the minimum number of pixels that the Flooder is allowed </dt>
+<dd><p class="first last">to grow in one step. Once the growth in a step is &lt;= growthMin, the 
+Flooder stops.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>growthMax - the maximum number of pixels that the Flooder is allowed </dt>
+<dd><p class="first last">to grow in one step. Once the growth in a step is &gt;= growthMax, the 
+Flooder stops. Prevents the flooder from incoporating all</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.binaryops.floodByThresh">
+<code class="descclassname">GenSIP.histomethod.binaryops.</code><code class="descname">floodByThresh</code><span class="sig-paren">(</span><em>img</em>, <em>min0</em>, <em>max0</em>, <em>d</em>, <em>upBound</em>, <em>lowBound</em>, <em>growthMin=0</em>, <em>growthMax=10000</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/binaryops.html#floodByThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.binaryops.floodByThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Floodfill algorithm that takes an image and, starting with all the pixels 
+in a certain range, expands those regions to take in pixels with a similar 
+graylevel. It is meant for filling out dirt paricles when a portion of the 
+dirt particle is known to be dirt and another portion is not certainly dirt.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last">
+<li><p class="first">img - the image to be flooded</p>
+</li>
+<li><p class="first">min0 - the minimum value for the initial threshold of the image</p>
+</li>
+<li><p class="first">max0 - the maximum value for the initial threshold of the image</p>
+</li>
+<li><dl class="first docutils">
+<dt>d - the maximum difference in pixel value that will result in a pixel</dt>
+<dd><p class="first last">being &#8216;flooded&#8217; in a step.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>upBound - the uppermost graylevel that will be considered able to be </dt>
+<dd><p class="first last">flood-filled. Should be greater than max0.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>lowBound - the lowermost graylevel that will be considered able to be </dt>
+<dd><p class="first last">flood-filled. Should be less than min0.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>growthMin - the minimum number of pixels that the Flooder is allowed </dt>
+<dd><p class="first last">to grow in one step. Once the growth in a step is &lt;= growthMin, the 
+Flooder stops.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>growthMax - the maximum number of pixels that the Flooder is allowed </dt>
+<dd><p class="first last">to grow in one step. Once the growth in a step is &gt;= growthMax, the 
+Flooder stops. Prevents the flooder from incoporating all</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.binaryops.threshold">
+<code class="descclassname">GenSIP.histomethod.binaryops.</code><code class="descname">threshold</code><span class="sig-paren">(</span><em>img</em>, <em>MIN</em>, <em>MAX=255</em>, <em>Binary=True</em>, <em>Bool=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/binaryops.html#threshold"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.binaryops.threshold" title="Permalink to this definition">¶</a></dt>
+<dd><p>A home made simple thresholding function. Not as robust as the one in opencv
+since it only has one straightforward thresholding method, and doesn&#8217;t have
+all the options as in opencv. But it works.
+Returns a thresholded image of either type np.uint8 or bo
+Inputs are:</p>
+<blockquote>
+<div><p>Arguments:</p>
+<dl class="docutils">
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last">
+<li><p class="first">MAX - The maximum value of the threshold. Default set to 255.</p>
+</li>
+<li><dl class="first docutils">
+<dt>Binary - Option to output a black and white uint8 image, with black </dt>
+<dd><p class="first last">set to 0 and white set to 255</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<ul>
+<li><dl class="first docutils">
+<dt>Boolean - Option to set the output image to <a href="#id5"><span class="problematic" id="id6">np.bool_</span></a> type, which means</dt>
+<dd><p class="first last">that black will be 0 (or False) and white would be 1 (or True).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<p>A nice student project would be to get this thresholding method working for 
+RGB images. It is low priority though since we deal with grayscale images.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod.datatools">
+<span id="gensip-histomethod-datatools-module"></span><h2>GenSIP.histomethod.datatools module<a class="headerlink" href="#module-GenSIP.histomethod.datatools" title="Permalink to this headline">¶</a></h2>
+<p>Contains all the functions used by Histograms to analyze data on the plots. 
+Unlike the histogram_tools module, this module has no functions specific only to
+GenSIP data formats.</p>
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.atFWHM">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">atFWHM</code><span class="sig-paren">(</span><em>histo</em>, <em>peakVal</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#atFWHM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.atFWHM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the color indices at the full-width-half-maximum of a given peak
+on a histogram. Does not subtract the backround.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.easyThresh">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">easyThresh</code><span class="sig-paren">(</span><em>img</em>, <em>MIN</em>, <em>MAX</em>, <em>Binary=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#easyThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.easyThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does exactly the same thing as the threshold function, it just does it in 
+fewer lines of code, and doesn&#8217;t have a Boolean option right now.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.getInflectionPoints">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">getInflectionPoints</code><span class="sig-paren">(</span><em>a</em>, <em>smoonum=4</em>, <em>sign='negative'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#getInflectionPoints"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.getInflectionPoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all of the negative or positive inflection points in a plot by first
+smoothing it 4 times with a running mean and then looking for points where 
+the second gradient is zero and the first gradient is either postive or negative.
+Inputs:</p>
+<blockquote>
+<div>a - an array of numbers</div></blockquote>
+<dl class="docutils">
+<dt>Key-Word Arguments (kwargs):</dt>
+<dd><dl class="first last docutils">
+<dt>smoonum = 4 - number of times to smooth the array to remove noise. Default</dt>
+<dd>set to 4.</dd>
+<dt>sign = &#8216;negative&#8217; - specifies whether to look for positive or negative </dt>
+<dd>inflection points.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.getMaxima">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">getMaxima</code><span class="sig-paren">(</span><em>a</em>, <em>smoonum=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#getMaxima"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.getMaxima" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all of the local maxima in a plot by first smoothing it 4 times 
+with a running mean and then looking for local maxima.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.getMinima">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">getMinima</code><span class="sig-paren">(</span><em>a</em>, <em>smoonum=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#getMinima"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.getMinima" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all of the local minima in a plot by first smoothing it 4 times 
+with a running mean and then looking for local minima.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.getZeroes">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">getZeroes</code><span class="sig-paren">(</span><em>a</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#getZeroes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.getZeroes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the index of the points at which an array crosses zero given the array</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.movingAverage">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">movingAverage</code><span class="sig-paren">(</span><em>a</em>, <em>n=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#movingAverage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.movingAverage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the moving average at each point for an array of data and returns
+an array of the moving Averages. The length of that array is the length of the
+original array minus 2. 
+Arguments:</p>
+<blockquote>
+<div><blockquote>
+<div><ul class="simple">
+<li>a - a numpy nd array</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last simple">
+<li>n - the number of points over which the floating average is calculated</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.nsmooth">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">nsmooth</code><span class="sig-paren">(</span><em>a</em>, <em>i=4</em>, <em>n=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#nsmooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.nsmooth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs smoothed over an array i times with a range n over which the running 
+mean is taken.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.runningMeanFast">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">runningMeanFast</code><span class="sig-paren">(</span><em>x</em>, <em>N</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#runningMeanFast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.runningMeanFast" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Another running mean function</dt>
+<dd><dl class="first last docutils">
+<dt>Arguments:</dt>
+<dd><ul class="first last simple">
+<li>x - a numpy nd array</li>
+<li>N - the number of points over which the floating average is calculated</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.datatools.smoothed">
+<code class="descclassname">GenSIP.histomethod.datatools.</code><code class="descname">smoothed</code><span class="sig-paren">(</span><em>a</em>, <em>n=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/datatools.html#smoothed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.datatools.smoothed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wraps moving average in such a way that it returns an array of the same size
+as the input array.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Arguments:</dt>
+<dd><ul class="first last simple">
+<li>a - a numpy nd array</li>
+</ul>
+</dd>
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last simple">
+<li>n - the number of points over which the average is calculated</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod.display">
+<span id="gensip-histomethod-display-module"></span><h2>GenSIP.histomethod.display module<a class="headerlink" href="#module-GenSIP.histomethod.display" title="Permalink to this headline">¶</a></h2>
+<p>Contains functions for saving and displaying data used in histogram analysis</p>
+<dl class="function">
+<dt id="GenSIP.histomethod.display.plotAllSects">
+<code class="descclassname">GenSIP.histomethod.display.</code><code class="descname">plotAllSects</code><span class="sig-paren">(</span><em>Data</em>, <em>PLT</em>, <em>val='none'</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/display.html#plotAllSects"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.display.plotAllSects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots all regions in a data dictionary onto the plot PLT within a figure</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.display.plotFromDict">
+<code class="descclassname">GenSIP.histomethod.display.</code><code class="descname">plotFromDict</code><span class="sig-paren">(</span><em>Data</em>, <em>region</em>, <em>PLT</em>, <em>smooColor='orange'</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/display.html#plotFromDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.display.plotFromDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function recieves a dictionary of the format of an individual region 
+prodcued by MakeRegions and plots the histogram and histogram data of that region.
+Inputs:</p>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>Data - The data dictionary containing information on all regions and made</dt>
+<dd><p class="first last">by MakeRegions in the newmethod module.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>region - a string giving the region. Must be identical to the key for</dt>
+<dd><p class="first last">the region in the Data dictionary.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.display.saveHist">
+<code class="descclassname">GenSIP.histomethod.display.</code><code class="descname">saveHist</code><span class="sig-paren">(</span><em>Data</em>, <em>path</em>, <em>name='foil'</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/display.html#saveHist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.display.saveHist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receives a Data dictionary and saves it to path and names it &lt;name&gt;.png</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod.foldertools">
+<span id="gensip-histomethod-foldertools-module"></span><h2>GenSIP.histomethod.foldertools module<a class="headerlink" href="#module-GenSIP.histomethod.foldertools" title="Permalink to this headline">¶</a></h2>
+<p>Contains tools for performing operations on folders and many items in a folder.</p>
+<dl class="function">
+<dt id="GenSIP.histomethod.foldertools.DoForFolder">
+<code class="descclassname">GenSIP.histomethod.foldertools.</code><code class="descname">DoForFolder</code><span class="sig-paren">(</span><em>folder</em>, <em>function</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/foldertools.html#DoForFolder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.foldertools.DoForFolder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a function to all the items in a folder and returns a dictionary whose
+keys are the name of each file in the folder and whose values are the 
+results of applying the function to file.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Arguments:</dt>
+<dd><ul class="first last">
+<li><p class="first">folder: path to folder that contains all the files to be processed</p>
+</li>
+<li><dl class="first docutils">
+<dt>function: function to apply to all the files in the folder</dt>
+<dd><p class="first last">NOTE: The first argument of this function must be a file path.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">*</span></a>args: arguments to pass on to the function in addition to the </dt>
+<dd><p class="first last">file path.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs: Keyword arguments to be passed on to the function as well</dt>
+<dd><p class="first last">as keyword arguments for DoForFolder.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Keyword Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>filter: A function to apply to the folder contents to filter out any</dt>
+<dd><p class="first last">undesirable items.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.foldertools.DoImgForFolder">
+<code class="descclassname">GenSIP.histomethod.foldertools.</code><code class="descname">DoImgForFolder</code><span class="sig-paren">(</span><em>folderpath</em>, <em>function</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/foldertools.html#DoImgForFolder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.foldertools.DoImgForFolder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.foldertools.FILonlySubimages">
+<code class="descclassname">GenSIP.histomethod.foldertools.</code><code class="descname">FILonlySubimages</code><span class="sig-paren">(</span><em>contents</em>, <em>limitToType=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/foldertools.html#FILonlySubimages"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.foldertools.FILonlySubimages" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a list of folder contents and returns only the items that are subImages
+Kwargs:</p>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>limitToType - if limitToType is a string, return only items ending with</dt>
+<dd><blockquote class="first">
+<div><p>that string, i.e. limitToType = &#8216;.tif&#8217; filters all but .tif
+files.</p>
+</div></blockquote>
+<ul class="last simple">
+<li>limitToType can also be a list, set, or tuple of strings</li>
+<li>if limitToType is anything else, it will not do anything</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.foldertools.findMoPeakByImgFolder">
+<code class="descclassname">GenSIP.histomethod.foldertools.</code><code class="descname">findMoPeakByImgFolder</code><span class="sig-paren">(</span><em>folderpath</em>, <em>imgType='.tif'</em>, <em>color=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/foldertools.html#findMoPeakByImgFolder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.foldertools.findMoPeakByImgFolder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod.histogram_tools">
+<span id="gensip-histomethod-histogram-tools-module"></span><h2>GenSIP.histomethod.histogram_tools module<a class="headerlink" href="#module-GenSIP.histomethod.histogram_tools" title="Permalink to this headline">¶</a></h2>
+<p>histogram_tools
+Contains functions that identify features in the histogram of an image or region
+in an image and determine the platinum or dirt threshold values.</p>
+<dl class="function">
+<dt id="GenSIP.histomethod.histogram_tools.findMoPeakByImg">
+<code class="descclassname">GenSIP.histomethod.histogram_tools.</code><code class="descname">findMoPeakByImg</code><span class="sig-paren">(</span><em>img</em>, <em>returnHist=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/histogram_tools.html#findMoPeakByImg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.histogram_tools.findMoPeakByImg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes the histogram of an image and determines the likely maximum of the 
+Molybdenum peak. Returns the pixel value (0 to 255) of the maximum of the 
+molybdenum peak.
+# The Molybdenum peak is usually the biggest and widest peak, but not the tallest.
+# Therefore, I first take the histogram of the image with 32 sections of 8 pixel-values
+# each, and then I determine which of those 32 sections has the highest count value.
+# Then I look for the maximum value within that section in a histogram divided into 256 
+parts, and that is the peak value.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.histogram_tools.selectDirtThresh">
+<code class="descclassname">GenSIP.histomethod.histogram_tools.</code><code class="descname">selectDirtThresh</code><span class="sig-paren">(</span><em>sectData</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/histogram_tools.html#selectDirtThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.histogram_tools.selectDirtThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>selects the dirt threshold value given the data dictionary of a region
+in the dictionary produced by NewRegThresh</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.histogram_tools.selectPtThresh">
+<code class="descclassname">GenSIP.histomethod.histogram_tools.</code><code class="descname">selectPtThresh</code><span class="sig-paren">(</span><em>sectData</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/histogram_tools.html#selectPtThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.histogram_tools.selectPtThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes the data dictionary of a specific region and uses the Histogram to determine
+the optimum threshold value for the platinum.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod.mainanalysis">
+<span id="gensip-histomethod-mainanalysis-module"></span><h2>GenSIP.histomethod.mainanalysis module<a class="headerlink" href="#module-GenSIP.histomethod.mainanalysis" title="Permalink to this headline">¶</a></h2>
+<p>mainanalysis Contains functions for running the histogram method of analyzing the
+foils.</p>
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.FilterFeatures">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">FilterFeatures</code><span class="sig-paren">(</span><em>sectData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#FilterFeatures"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.FilterFeatures" title="Permalink to this definition">¶</a></dt>
+<dd><p>FilterFeatures makes sure that any features (i.e. a Peak, an inflection point,
+or a valley) in an image Histogram that are identified by a function are not 
+greater than the maximum pixel value or less than the minimum pixel value.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.MakeRegions">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">MakeRegions</code><span class="sig-paren">(</span><em>ogimage</em>, <em>poster</em>, <em>Mask=0</em>, <em>gaussBlur=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#MakeRegions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.MakeRegions" title="Permalink to this definition">¶</a></dt>
+<dd><p>This Function breaks up an image into subregions and returns a dictionary 
+containing information on each subregion that can be used for further anal-
+ysis and for setting the threshold levels.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.NewRegThresh">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">NewRegThresh</code><span class="sig-paren">(</span><em>ogimage</em>, <em>Data</em>, <em>Mask=0</em>, <em>MoDirt='Mo'</em>, <em>returnData=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#NewRegThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.NewRegThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates thresholded images and modifies the Data dictionary for a given image.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.PosterPreProc">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">PosterPreProc</code><span class="sig-paren">(</span><em>image</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#PosterPreProc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.PosterPreProc" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method takes the image of the foil and creates a smoothed Kuwahara image
+used to make the poster for regional thresholding.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Key-word Arguments:</dt>
+<dd>Mask = 0 - Assign the Mask here
+kern = 6 - Kernal size for poster opening and closing steps
+KuSize = 17 - Size of Kuwahara Filter
+Gaus1 = 5 - Size of first Gaussian Blur
+Gaus2 = 3 - Size of second Gaussian Blur
+rsize = .1 - Resize value
+Kuw_only = False - Option to only return the Kuwahara filtered image
+ExcludeDirt = True - Option to Exclude dirt</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.analyzeByHisto">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">analyzeByHisto</code><span class="sig-paren">(</span><em>img</em>, <em>res</em>, <em>Mask=0</em>, <em>verbose=True</em>, <em>MoDirt='mo'</em>, <em>genPoster=False</em>, <em>returnData=False</em>, <em>returnSizes=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#analyzeByHisto"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.analyzeByHisto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the histogram analysis on an image. 
+Inputs:</p>
+<blockquote>
+<div><ul class="simple">
+<li>img - image as a numpy.ndarray</li>
+<li>res - resolution of the image in square microns/pixel</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>Mask - mask of the image, must have the same dimensions as img. if set </dt>
+<dd><p class="first last">to 0, no mask is used.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">MoDirt - option to perform molybdenum or dirt analysis on the image</p>
+</li>
+<li><dl class="first docutils">
+<dt>MaskEdges = True - option to automatically mask off the background if </dt>
+<dd><p class="first last">set to True</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">returnData = False -</p>
+</li>
+<li></li>
+<li><p class="first">retSizes = False - option to return the raw dirt sizes in pixel area if set to True</p>
+</li>
+<li><p class="first">verbose = False - prints verbose output if set to True.</p>
+</li>
+</ul>
+</dd>
+<dt>Returns 2 tuples (or 3 if retSizeData = True):</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>stats - numerical molybdenum or dirt data:</dt>
+<dd><ul class="first simple">
+<li>numDirt - number of dirt particles</li>
+<li>Area</li>
+<li>AreaDirt - total area of dirt particles in square microns</li>
+<li>Perc - percentage of foil covered in dirt</li>
+</ul>
+<p>&lt;optional if retSizeData=True&gt;:
+- MeanSize
+- MaxSize - 
+- percAreaOver100 - Percent of particles with an approximate diameter</p>
+<blockquote>
+<div><p>greater than 100 microns</p>
+</div></blockquote>
+<p>&lt;optional if retSizes=True&gt;:
+- sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)</p>
+<blockquote class="last">
+<div><p>of each dirt particle in pixels</p>
+</div></blockquote>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>picts - the thresholded dirt or platinum images and poster</dt>
+<dd><ul class="first last simple">
+<li>threshed</li>
+<li>poster</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.applyDirtThresh">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">applyDirtThresh</code><span class="sig-paren">(</span><em>image</em>, <em>DirtThresh</em>, <em>regionMask=0</em>, <em>Mask=0</em>, <em>kernSize=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#applyDirtThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.applyDirtThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies the dirt threshold to an image and then performs a morphological 
+opening to the thresholded image.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.applyPtThresh">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">applyPtThresh</code><span class="sig-paren">(</span><em>image</em>, <em>PtThresh</em>, <em>regionMask=0</em>, <em>Mask=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#applyPtThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.applyPtThresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies the platinum threshold to an image.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.bigMaskEdges">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">bigMaskEdges</code><span class="sig-paren">(</span><em>image</em>, <em>res</em>, <em>maxFeatureSize=2000</em>, <em>Bkgrdthreshold=95</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#bigMaskEdges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.bigMaskEdges" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Creates a mask for masking off the edges of a large foil scan.</dt>
+<dd><dl class="first last docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last simple">
+<li>image - image to be masked</li>
+</ul>
+</dd>
+<dt>Key-word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>maxFeatureSize - largest feature diameter not considered to be the </dt>
+<dd><p class="first last">edge of the foil. Default set to 10000 microns.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">threshold - approximate maximum value of the background</p>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.cleanUpRegData">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">cleanUpRegData</code><span class="sig-paren">(</span><em>Data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#cleanUpRegData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.cleanUpRegData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes regions from the data dictionary that are not in the poster (and hence
+simply say &#8216;Null&#8217;).
+Runs &#8220;FilterFeatures&#8221; on the regions that are in the poster.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.findMaxReg">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">findMaxReg</code><span class="sig-paren">(</span><em>Data</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#findMaxReg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.findMaxReg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the largest region in an image using its Data Dictionary.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.generateMapsAndData">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">generateMapsAndData</code><span class="sig-paren">(</span><em>img</em>, <em>Mask=0</em>, <em>verbose=False</em>, <em>genPoster=False</em>, <em>genProc=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#generateMapsAndData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.generateMapsAndData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receives an image and optionally a Mask and returns the PtMap, DirtMap,
+Data dictionary and optionally the poster and preprocessed image from NewRegThresh</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.getFoilArea">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">getFoilArea</code><span class="sig-paren">(</span><em>Data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#getFoilArea"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.getFoilArea" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the total foil area (in Pixels) of all of the regions of the 
+data dictionary</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.getMasksFromPoster">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">getMasksFromPoster</code><span class="sig-paren">(</span><em>poster</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#getMasksFromPoster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.getMasksFromPoster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receives a poster of an imagea and returns a list of images in which pixels 
+in the region have a value of 1 and pixels not in the region have a value of
+0. The exception is the &#8216;blk&#8217; region, which is reversed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.getMolyMap">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">getMolyMap</code><span class="sig-paren">(</span><em>DirtMap</em>, <em>PtMap</em>, <em>regionMask=0</em>, <em>Mask=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#getMolyMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.getMolyMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the map of the molybdenum given designated masks of the Dirt, Platinum,
+region, and Mask.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.histomethod.mainanalysis.runOnSubImgs">
+<code class="descclassname">GenSIP.histomethod.mainanalysis.</code><code class="descname">runOnSubImgs</code><span class="sig-paren">(</span><em>folderpath</em>, <em>maskPath</em>, <em>res</em>, <em>name</em>, <em>writeToCSV=True</em>, <em>genPoster=False</em>, <em>exten='.tif'</em>, <em>verbose=True</em>, <em>genResults=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/histomethod/mainanalysis.html#runOnSubImgs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.histomethod.mainanalysis.runOnSubImgs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs newmethod analyzeImg on a folder of sub images.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.histomethod">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-GenSIP.histomethod" title="Permalink to this headline">¶</a></h2>
+<p>histomethod
+Package containing the histogram method of analyzing dirt and platinum.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GenSIP.histomethod package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.binaryops">GenSIP.histomethod.binaryops module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.datatools">GenSIP.histomethod.datatools module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.display">GenSIP.histomethod.display module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.foldertools">GenSIP.histomethod.foldertools module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.histogram_tools">GenSIP.histomethod.histogram_tools module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod.mainanalysis">GenSIP.histomethod.mainanalysis module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.histomethod">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="GenSIP.html">GenSIP package</a><ul>
+      <li>Previous: <a href="GenSIP.cleantests.html" title="previous chapter">GenSIP.cleantests package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GenSIP.histomethod.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/GenSIP.histomethod.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,893 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP package &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="index.html" />
+    <link rel="next" title="GenSIP.bigscans package" href="GenSIP.bigscans.html" />
+    <link rel="prev" title="Welcome to GenSIP’s documentation!" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gensip-package">
+<h1>GenSIP package<a class="headerlink" href="#gensip-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="GenSIP.bigscans.html">GenSIP.bigscans package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.bigscans.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.bigscans.html#module-GenSIP.bigscans.bigcalibrate">GenSIP.bigscans.bigcalibrate module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.bigscans.html#module-GenSIP.bigscans.bigfoils">GenSIP.bigscans.bigfoils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.bigscans.html#module-GenSIP.bigscans.images">GenSIP.bigscans.images module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.bigscans.html#module-GenSIP.bigscans">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="GenSIP.cleantests.html">GenSIP.cleantests package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#gensip-cleantests-calibrate-module">GenSIP.cleantests.calibrate module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#module-GenSIP.cleantests.dirt">GenSIP.cleantests.dirt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#module-GenSIP.cleantests.moly">GenSIP.cleantests.moly module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#gensip-cleantests-tests-cleantests-module">GenSIP.cleantests.tests_cleantests module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.cleantests.html#module-GenSIP.cleantests">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="GenSIP.histomethod.html">GenSIP.histomethod package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.binaryops">GenSIP.histomethod.binaryops module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.datatools">GenSIP.histomethod.datatools module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.display">GenSIP.histomethod.display module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.foldertools">GenSIP.histomethod.foldertools module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.histogram_tools">GenSIP.histomethod.histogram_tools module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod.mainanalysis">GenSIP.histomethod.mainanalysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenSIP.histomethod.html#module-GenSIP.histomethod">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-GenSIP.GenGUI">
+<span id="gensip-gengui-module"></span><h2>GenSIP.GenGUI module<a class="headerlink" href="#module-GenSIP.GenGUI" title="Permalink to this headline">¶</a></h2>
+<p>GenGUI is a module that creates a GUI that allows the user to make adjustments to
+an image and play with the threshold value and threshold methods. 
+To use:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Run this file in python/iPython</li>
+<li>load the image you want to analyze as an ndarray using fun.loadImg(filepath)</li>
+<li>Call GUIfy using that ndarray as input</li>
+</ol>
+</div></blockquote>
+<p>This module hasn&#8217;t been updated in a while and was rather haphazard from the 
+beginning, so it may not work very well, and not all features will work, but it 
+still should basically function.</p>
+<dl class="function">
+<dt id="GenSIP.GenGUI.GUIfy">
+<code class="descclassname">GenSIP.GenGUI.</code><code class="descname">GUIfy</code><span class="sig-paren">(</span><em>image</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/GenGUI.html#GUIfy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.GenGUI.GUIfy" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method takes an image of a foil (a numpy ndarray, not a pathname),and starts 
+up a GUI that allows the user to adjust the settings on various functions in 
+order to see their effects on the foil. The most developed of the sub-GUIs is 
+the regionalThresh GUI.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.exampleScript">
+<span id="gensip-examplescript-module"></span><h2>GenSIP.exampleScript module<a class="headerlink" href="#module-GenSIP.exampleScript" title="Permalink to this headline">¶</a></h2>
+<p>Contains examples of how to run several of the analysis functions in GenSIP. 
+To use, just remove the block quotes from one of the scripts and run this file.</p>
+</div>
+<div class="section" id="module-GenSIP.functions">
+<span id="gensip-functions-module"></span><h2>GenSIP.functions module<a class="headerlink" href="#module-GenSIP.functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="GenSIP.functions.FizzBuzz">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">FizzBuzz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#FizzBuzz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.FizzBuzz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.checkMoDirt">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">checkMoDirt</code><span class="sig-paren">(</span><em>MoDirt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#checkMoDirt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.checkMoDirt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows for several input options for MoDirt and converts them into a standard
+parameter &#8216;mo&#8217; or &#8216;dirt&#8217;, and raises an exception if the input is invalid.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.convTime">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">convTime</code><span class="sig-paren">(</span><em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#convTime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.convTime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the time from seconds to a string in minutes and seconds</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.getDateString">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">getDateString</code><span class="sig-paren">(</span><em>minSep='.'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#getDateString"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.getDateString" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the date and time formated as &#8220;mm-dd-yyyy hh:minminAM&#8221;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.getFoilArea">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">getFoilArea</code><span class="sig-paren">(</span><em>img</em>, <em>res</em>, <em>getAreaInSquaremm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#getFoilArea"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.getFoilArea" title="Permalink to this definition">¶</a></dt>
+<dd><p>FUNCTION MAY BE OUTDATED IF I REWORK MoComp AND isolatePT TO USE THE GetMask 
+OPTION AND USE THAT IMAGE TO APPROXIMATE FOIL AREA. 
+This is a function based on maskEdge that returns the approximate area of the foil.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Inputs:</dt>
+<dd><ul class="first last simple">
+<li>img = nparray of image,</li>
+<li>res = the resolution of the image, in square microns per pixel</li>
+</ul>
+</dd>
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>getAreaInSquaremm - If true, converts the getFoilArea from square microns</dt>
+<dd><p class="first last">to square millimeters.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.getGenSIPVersion">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">getGenSIPVersion</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#getGenSIPVersion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.getGenSIPVersion" title="Permalink to this definition">¶</a></dt>
+<dd><p>This returns the string that names the current version of GenSIP. It assumes 
+that the current working directory is the one containing the GenSIP folder</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.justFrigginGetTheNormalTime">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">justFrigginGetTheNormalTime</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#justFrigginGetTheNormalTime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.justFrigginGetTheNormalTime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns time in the format: &#8216;Mon Jun 22 17:49:39 2015&#8217;
+If called with no arguments, returns the current time in that format.
+If called with a time as a float or a struct_time object, returns that
+time in the specified format.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.loadImg">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">loadImg</code><span class="sig-paren">(</span><em>path</em>, <em>flag=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#loadImg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.loadImg" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a function for loading images. It basically just solves an issue with 
+cv2.imread and raises an exception if the path is wrong and cv2 returns a NoneType 
+rather than a numpy array.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.makeDiamondKernel">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">makeDiamondKernel</code><span class="sig-paren">(</span><em>radius</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#makeDiamondKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.makeDiamondKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a diamond shape kernel given the radius.
+Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">makeDiamondKernel</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>array([[ 0.,  0.,  1.,  0.,  0.],</dt>
+<dd>[ 0.,  1.,  1.,  1.,  0.],
+[ 1.,  1.,  1.,  1.,  1.],
+[ 0.,  1.,  1.,  1.,  0.],
+[ 0.,  0.,  1.,  0.,  0.]])</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.makePoster">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">makePoster</code><span class="sig-paren">(</span><em>image</em>, <em>kern=6</em>, <em>KuSize=9</em>, <em>Gaus1=3</em>, <em>Gaus2=11</em>, <em>rsize=0.1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#makePoster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.makePoster" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method takes the image of the foil and creates a smoothed Kuwahara image
+used to make the poster for regional thresholding.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.maskEdge">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">maskEdge</code><span class="sig-paren">(</span><em>img</em>, <em>thickness=80</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#maskEdge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.maskEdge" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function masks off the outer edge of the foil, since the edge complicates dirt particle counting
+Parameters are:</p>
+<blockquote>
+<div><p>img = nparray of image,
+thickness = the number of pixels you want to take of the edge of the foil</p>
+<blockquote>
+<div>Based on the image resolution, 1 micron ~= i pixel</div></blockquote>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.posterfy">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">posterfy</code><span class="sig-paren">(</span><em>image</em>, <em>k_size=6</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#posterfy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.posterfy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a gray image and sets all values within a given range to a single value
+this way we can divide up regions into primarily Pt, primarily Mo, dirt, or black</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.regionalThresh">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">regionalThresh</code><span class="sig-paren">(</span><em>ogimage</em>, <em>poster</em>, <em>p=8</em>, <em>d=28</em>, <em>m=55</em>, <em>pt=60</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#regionalThresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.regionalThresh" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div>This is the main thresholding method for analyzing the amount of Pt and dirt on</div></blockquote>
+<p>the foils. It takes the posterized image and splits the image into regions based on
+the gray level in these different regions, then it assigns different threshold parameters 
+to the different regions, specified by the arguments p,d,m, and pt, which correspond to the
+regions &#8216;pleat&#8217;,&#8217;dark Molybdenum&#8217;, &#8216;Molybdenum,&#8217; and &#8216;platinum.&#8217;</p>
+<blockquote>
+<div>regionalThresh returns the final thresholded image with the black area around the foil</div></blockquote>
+<p>cut out so that only the dirt appears. This allows mh.label to count the dirt and not get
+thrown off by the foil outline. If the option &#8220;GetMask&#8221; is set to True, then regionalThresh
+also returns the image of the outline of the foil and all regions that are black (&lt;5).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.functions.show">
+<code class="descclassname">GenSIP.functions.</code><code class="descname">show</code><span class="sig-paren">(</span><em>*images</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/functions.html#show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.functions.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a useful function for plotting and displaying any number of images quickly.
+Arguments:</p>
+<blockquote>
+<div><a href="#id1"><span class="problematic" id="id2">*</span></a>images - any number of images you wish to display</div></blockquote>
+<dl class="docutils">
+<dt>Key Word arguments:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>color = &#8216;gray&#8217; - designates the color option use in plt.imshow.</dt>
+<dd><p class="first last">Examples include &#8220;jet,&#8221; &#8220;gray&#8221; (default), more in docstring
+for plt.imshow.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">rows = 1 - designates numbers of rows to display the images on</p>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.gencsv">
+<span id="gensip-gencsv-module"></span><h2>GenSIP.gencsv module<a class="headerlink" href="#module-GenSIP.gencsv" title="Permalink to this headline">¶</a></h2>
+<p>This module contains class that handles all data writing and saving to csv
+file format for GenSIP.</p>
+<dl class="class">
+<dt id="GenSIP.gencsv.DataToCSV">
+<em class="property">class </em><code class="descclassname">GenSIP.gencsv.</code><code class="descname">DataToCSV</code><span class="sig-paren">(</span><em>filepath</em>, <em>title</em>, <em>mode='w+b'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class that contains methods that write data from data dictionaries to 
+a specifically formatted SV file.</p>
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.closeCSVFile">
+<code class="descname">closeCSVFile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.closeCSVFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.closeCSVFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes the CSV file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.isCleaningTest">
+<code class="descname">isCleaningTest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.isCleaningTest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.isCleaningTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks to see if the particular test is a cleaning test, by looking to see 
+if the title is all capitalized and ends with an F (as in BGF or BGNF</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.makeTitle">
+<code class="descname">makeTitle</code><span class="sig-paren">(</span><em>title</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.makeTitle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.makeTitle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes the title row (first row) of the CSV file based off of the title 
+vairable.
+Inputs: title string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.writeDataFromDict">
+<code class="descname">writeDataFromDict</code><span class="sig-paren">(</span><em>dataDict</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.writeDataFromDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.writeDataFromDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dictionary argument with the data from an analysis fuction and 
+writes it to the csv file. Automatically creates column headers by 
+sorting alphabetically the individual pieces of data, or manually by 
+receiving a list describing the desired column headers. 
+This function should be easily generalized to receive any dictionary with the
+format:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>resultsDict = {</dt>
+<dd><dl class="first docutils">
+<dt>&#8216;item1&#8217;:{&#8216;result1&#8217;:&lt;str or number&gt;,</dt>
+<dd><p class="first">...,
+&#8216;resultN&#8217;:&lt;str or number&gt;
+},</p>
+<p class="last">...</p>
+</dd>
+<dt>&#8216;itemN&#8217;:{&#8216;result1&#8217;:&lt;str or number&gt;,</dt>
+<dd>...,
+&#8216;resultN&#8217;:&lt;str or number&gt;
+}</dd>
+</dl>
+<p class="last">&#8216;TOTALS&#8217;:{&#8216;tot1&#8217;:&lt;entry1&gt;,...,&#8217;totN&#8217;:&lt;entryN&gt;}
+&#8216;OTHER_FOOTER_INFO&#8217;:{&#8216;other1:&lt;entry1&gt;,...,&#8217;otherN&#8217;:&lt;entryN&gt;}
+}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>In general &#8216;item1&#8217; to &#8216;itemN&#8217; will be the subimage names. 
+Inputs:</p>
+<blockquote>
+<div><ul class="simple">
+<li>dataDict - results dictionary formatted as described above.</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Key-Word Arguments:</dt>
+<dd><ul class="first last">
+<li><p class="first">FirstColHead = &#8216;Foil&#8217; - Header for the rows of items.</p>
+</li>
+<li><dl class="first docutils">
+<dt>footerItems = [&#8220;TOTALS&#8221;,&#8221;TOTAL&#8221;] - list of entries (keys in the dataDict)</dt>
+<dd><p class="first last">that are to only be included in the footer. Usually this entry is a 
+subDictionary of totals or averages to be placed at the end of the 
+csv file.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>colHeads = 0 - option to give the column headers of the data. If</dt>
+<dd><p class="first last">left at 0, writeDataFromDict will automatically create headers 
+from the result keys for each item.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.writeHeader">
+<code class="descname">writeHeader</code><span class="sig-paren">(</span><em>TitleRow</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.writeHeader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.writeHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>writes the header to the csv file given the first title row</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.writeRow">
+<code class="descname">writeRow</code><span class="sig-paren">(</span><em>row</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.writeRow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.writeRow" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="GenSIP.gencsv.DataToCSV.writeRows">
+<code class="descname">writeRows</code><span class="sig-paren">(</span><em>rows</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/gencsv.html#DataToCSV.writeRows"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.gencsv.DataToCSV.writeRows" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.kuwahara">
+<span id="gensip-kuwahara-module"></span><h2>GenSIP.kuwahara module<a class="headerlink" href="#module-GenSIP.kuwahara" title="Permalink to this headline">¶</a></h2>
+<p>Kuwahara filter implemented in python</p>
+<dl class="function">
+<dt id="GenSIP.kuwahara.Kuwahara">
+<code class="descclassname">GenSIP.kuwahara.</code><code class="descname">Kuwahara</code><span class="sig-paren">(</span><em>original</em>, <em>winsize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/kuwahara.html#Kuwahara"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.kuwahara.Kuwahara" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kuwahara filters an image using the Kuwahara filter</p>
+<p>Inputs:
+original      &#8211;&gt;    image to be filtered
+windowSize    &#8211;&gt;    size of the filter window: legal values are</p>
+<blockquote>
+<div>5, 9, 13, ... = (4*k+1)</div></blockquote>
+<p>This function is optimised using vectorialisation, convolution and the fact 
+that, for every subregion</p>
+<blockquote>
+<div>variance = (mean of squares) - (square of mean).</div></blockquote>
+<p>A nested-for loop approach is still used in the final part as it is more
+readable, a commented-out, fully vectorialised version is provided as well.</p>
+<p>Example
+filtered = Kuwahara(original,5);</p>
+<p>Filter description:
+The Kuwahara filter works on a window divided into 4 overlapping
+subwindows (for a 5x5 pixels example, see below). In each subwindow, the mean and
+variance are computed. The output value (located at the center of the
+window) is set to the mean of the subwindow with the smallest variance.</p>
+<blockquote>
+<div>( a  a  ab   b  b)
+( a  a  ab   b  b)
+(ac ac abcd bd bd)
+( c  c  cd   d  d)
+( c  c  cd   d  d)</div></blockquote>
+<p>References:
+<a class="reference external" href="http://www.ph.tn.tudelft.nl/DIPlib/docs/FIP.pdf">http://www.ph.tn.tudelft.nl/DIPlib/docs/FIP.pdf</a> 
+<a class="reference external" href="http://www.incx.nec.co.jp/imap-vision/library/wouter/kuwahara.html">http://www.incx.nec.co.jp/imap-vision/library/wouter/kuwahara.html</a></p>
+<p>Copyright Luca Balbi, 2007
+Original license is contained in a block comment at the bottom of this file.</p>
+<p>Translated from Matlab into Python by Andrew Dussault, 2015</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.measure">
+<span id="gensip-measure-module"></span><h2>GenSIP.measure module<a class="headerlink" href="#module-GenSIP.measure" title="Permalink to this headline">¶</a></h2>
+<p>Contains functions that measure the exposed platinum, dirt particles, molybdenum,
+etc. based on the thresholded images produced by analysis methods.</p>
+<dl class="exception">
+<dt id="GenSIP.measure.AllBlackError">
+<em class="property">exception </em><code class="descclassname">GenSIP.measure.</code><code class="descname">AllBlackError</code><span class="sig-paren">(</span><em>msg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#AllBlackError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.AllBlackError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GenSIP.measure.MeasError" title="GenSIP.measure.MeasError"><code class="xref py py-class docutils literal"><span class="pre">GenSIP.measure.MeasError</span></code></a></p>
+<p>Error if image is all black</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="GenSIP.measure.AllWhiteError">
+<em class="property">exception </em><code class="descclassname">GenSIP.measure.</code><code class="descname">AllWhiteError</code><span class="sig-paren">(</span><em>msg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#AllWhiteError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.AllWhiteError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#GenSIP.measure.MeasError" title="GenSIP.measure.MeasError"><code class="xref py py-class docutils literal"><span class="pre">GenSIP.measure.MeasError</span></code></a></p>
+<p>Error if image is all white</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="GenSIP.measure.MeasError">
+<em class="property">exception </em><code class="descclassname">GenSIP.measure.</code><code class="descname">MeasError</code><a class="reference internal" href="_modules/GenSIP/measure.html#MeasError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.MeasError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></code></p>
+<p>Generic error for the measure module</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.measure.calcDirt">
+<code class="descclassname">GenSIP.measure.</code><code class="descname">calcDirt</code><span class="sig-paren">(</span><em>img</em>, <em>res</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#calcDirt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.calcDirt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the number of dirt particles and the area of the foil covered by dirt
+Takes a black and white image (white dirt on black foil)
+Returns the number of dirt particles, the area of dirt particles, and a labelled image
+inverse the colors since mahotas.label only works on white on black</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Key-word Arguments:</dt>
+<dd><dl class="first last docutils">
+<dt>returnSizes=False</dt>
+<dd><ul class="first last simple">
+<li>Option that returns the sizes array as the third ouput if true</li>
+</ul>
+</dd>
+<dt>returnLabelled = False</dt>
+<dd><ul class="first last simple">
+<li>Option that returns the labelled array as the fourth output if true</li>
+</ul>
+</dd>
+<dt>foilIncluded = False</dt>
+<dd><ul class="first simple">
+<li>If true than the input image includes the outline of the foil in</li>
+</ul>
+<p class="last">black and the bakcground in white.</p>
+</dd>
+<dt>areaInSqmm = False</dt>
+<dd><ul class="first last simple">
+<li>Option to return the areaDirt in square mm rather than sq microns.</li>
+</ul>
+</dd>
+<dt>BoundConds = np.ones((3,3))</dt>
+<dd><ul class="first simple">
+<li>Structuring element that tells the mahotas label function which</li>
+</ul>
+<p class="last">nearest neighbors to consider as part of the same region. Default
+set to a 3x3 matrix of ones so it will consider the 8 nearest neighbors.</p>
+</dd>
+<dt>minPartArea = 0</dt>
+<dd><ul class="first simple">
+<li>Minimum dirt particle area to be considered in the count and area</li>
+</ul>
+<p class="last">approximation. In square microns. Default set to 0.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.measure.calcExposedPt">
+<code class="descclassname">GenSIP.measure.</code><code class="descname">calcExposedPt</code><span class="sig-paren">(</span><em>Ptimage</em>, <em>res</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#calcExposedPt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.calcExposedPt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the area of exposed platinum in square millimeters.
+Input is the thresholded platinum image and the image resolution, 
+in square microns per pixel.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.measure.getDirtSizeData">
+<code class="descclassname">GenSIP.measure.</code><code class="descname">getDirtSizeData</code><span class="sig-paren">(</span><em>DirtSizes</em>, <em>res</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#getDirtSizeData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.getDirtSizeData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receives the dirt particle size array and the resolution of the image and 
+returns some data on the particle sizes.
+Inputs:</p>
+<blockquote>
+<div><ul class="simple">
+<li>DirtSizes - 1-dimensional ndarray of dirt sizes in pixels.</li>
+<li>res - resolution of the image in square microns/pixel area</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns a tuple containing:</dt>
+<dd><ul class="first last">
+<li><p class="first">MeanSize - Mean dirt particle area in square microns</p>
+</li>
+<li><p class="first">MaxSize - Max dirt particle area in square microns</p>
+</li>
+<li><dl class="first docutils">
+<dt>percAreaOver100 - Percent of particles with an approximate diameter </dt>
+<dd><p class="first last">greater than 100 microns</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.measure.makeSizeHistogram">
+<code class="descclassname">GenSIP.measure.</code><code class="descname">makeSizeHistogram</code><span class="sig-paren">(</span><em>sizes</em>, <em>res</em>, <em>name</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/measure.html#makeSizeHistogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.measure.makeSizeHistogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes a histogram of the dirt size data
+Inputs:</p>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)</dt>
+<dd><p class="first last">of each dirt particle in pixels</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">res - resolution of the image in square microns/pixel area</p>
+</li>
+<li><p class="first">name - name of the image to be the title of the histogram plot</p>
+</li>
+<li><p class="first">path - path to folder to which the histogram plot will be saved.</p>
+</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</div>
+<div class="section" id="module-GenSIP.nexus">
+<span id="gensip-nexus-module"></span><h2>GenSIP.nexus module<a class="headerlink" href="#module-GenSIP.nexus" title="Permalink to this headline">¶</a></h2>
+<p>Contains generic image analysis functions that put the various methods in GenSIP
+together under one roof.</p>
+<dl class="function">
+<dt id="GenSIP.nexus.analyzImgOrFolder">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">analyzImgOrFolder</code><span class="sig-paren">(</span><em>path</em>, <em>res</em>, <em>method='cleantests'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#analyzImgOrFolder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.analyzImgOrFolder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyze Image or Folder (analyzImgOrFolder)</p>
+<p>Receives a path to an image or a folder of images and saves the output csv
+file and pictures to a folder in the Output/ directory.</p>
+<dl class="docutils">
+<dt>ARGUMENTS:</dt>
+<dd><ul class="first last simple">
+<li>path - path to the folder or image to be analyzed</li>
+<li>res - resolution of the image, in microns^2/pixel area</li>
+</ul>
+</dd>
+<dt>KEY-WORD ARGUMENTS:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>method =  &#8220;cleantests&#8221; - the method to use to analyze the image.</dt>
+<dd><dl class="first last docutils">
+<dt>Can be one of the following:</dt>
+<dd><p class="first">cleantests - method used by cleantests.dirt and moly
+bigfoils - method used by bigscans.bigfoils
+histogram - new method developed that automatically assigns</p>
+<blockquote>
+<div><p>threshold values based on the histogram of the image.
+Currently analyzImgOrFolder is the most refined means
+of using the histogram module.</p>
+</div></blockquote>
+<dl class="last docutils">
+<dt>standards - this method works by accessing the manually </dt>
+<dd><p class="first last">thresholded images stored in standards/all_dirt/ and 
+standards/all_plat/ inside the current working 
+directory, and calculates the platinum or dirt data
+directly from those thresholded images. The path variable 
+must be a folder of the standard images.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><p class="first">MoDirt = &#8216;Mo&#8217; - option to do molybdenum or dirt analysis</p>
+</li>
+<li><dl class="first docutils">
+<dt>Mask = 0 - option to include a path string to either a single mask (in </dt>
+<dd><p class="first last">the case that the path variable links to a single image) or 
+a folder of masks with the same name as the image they corre-
+spond to. i.e. the image is &#8220;Images/sub_img_004_003.png&#8221; and the 
+mask is at &#8220;masks/sub_img_004_003.png&#8221;</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>genPoster = False - Option to generate a folder of poster images in the</dt>
+<dd><p class="first last">the output folder.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>autoMaskEdges = False - allows the bigfoil and histogram methods to work</dt>
+<dd><p class="first last">with individual foils like the cleantest method by automatically 
+masking off the dark background around the foil.If this option
+is set to True, then any input for the Mask variable is over
+-ridden.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>stdDir = &#8220;standards/&#8221; - sets the directory containing the standards in</dt>
+<dd><p class="first last">the &#8220;all_stds/&#8221;, &#8220;all_plat/&#8221;, &#8220;all_dirt/&#8221; and &#8220;all_masks&#8221; directories.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">verbose = False - makes the function verbose.</p>
+</li>
+<li><dl class="first docutils">
+<dt>compToStds = False - Currently not used for anything. Would like to </dt>
+<dd><p class="first last">turn this option into a means of directly comparing the 
+results of one method to the standard results</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>retDataAndPicts = False - returns the Data and Pictures instead of </dt>
+<dd><p class="first last">writing them to image and CSV files.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>EXAMPLE:</dt>
+<dd>&gt; analyzImgOrFolder (&#8220;InputPicts/Folder/&#8221;,16,MoDirt=&#8217;mo&#8217;,method=&#8217;cleantests&#8217;)</dd>
+</dl>
+<p>Will run the cleantest analysis on all images in &#8220;InputPicts/Folder/&#8221; and 
+will save all the output to a folder &#8220;Output/Output_Folder_cleantests/&#8221;. 
+The contents of this folder are:</p>
+<blockquote>
+<div><ul class="simple">
+<li>PtMaps/ - a folder of the thresholded images of exposed platinum</li>
+<li>Mo_output_Folder.csv - a CSV file that contains the molybdenum analysis data</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.analyzeImage">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">analyzeImage</code><span class="sig-paren">(</span><em>path</em>, <em>res</em>, <em>method='cleantests'</em>, <em>MoDirt='mo'</em>, <em>Mask=0</em>, <em>autoMaskEdges=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#analyzeImage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.analyzeImage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the path, runs analysis on a single image using one of the methods in
+GenSIP specified by the &#8216;method&#8217; kwarg (currently: cleantests or bigfoils). 
+Returns a Data Dictionary and the thresholded image and poster.
+Inputs:</p>
+<blockquote>
+<div><ul class="simple">
+<li>path - path to the image to be analyzed</li>
+<li>res - resolution of the image, in microns^2/pixel area</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>KEY-WORD ARGUMENTS:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>method =  &#8220;cleantests&#8221; - the method to use to analyze the image.</dt>
+<dd><dl class="first last docutils">
+<dt>Can be one of the following:</dt>
+<dd><p class="first">cleantests - method used by cleantests.dirt and moly
+bigfoils - method used by bigscans.bigfoils
+histogram - new method developed that automatically assigns</p>
+<blockquote>
+<div><p>threshold values based on the histogram of the image.
+Currently analyzImgOrFolder is the most refined means
+of using the histogram module.</p>
+</div></blockquote>
+<dl class="last docutils">
+<dt>standards - this method works by accessing the manually </dt>
+<dd><p class="first last">thresholded images stored in standards/all_dirt/ and 
+standards/all_plat/ inside the current working 
+directory, and calculates the platinum or dirt data
+directly from those thresholded images. The path variable 
+must be a folder of the standard images.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><p class="first">MoDirt = &#8216;Mo&#8217; - option to do molybdenum or dirt analysis</p>
+</li>
+<li><dl class="first docutils">
+<dt>Mask = 0 - option to include a path string to either a single mask (in </dt>
+<dd><p class="first last">the case that the path variable links to a single image) or 
+a folder of masks with the same name as the image they corre-
+spond to. i.e. the image is &#8220;Images/sub_img_004_003.png&#8221; and the 
+mask is at &#8220;masks/sub_img_004_003.png&#8221;</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>autoMaskEdges = False - allows the bigfoil and histogram methods to work</dt>
+<dd><p class="first last">with individual foils like the cleantest method by automatically 
+masking off the dark background around the foil.If this option
+is set to True, then any input for the Mask variable is over
+-ridden.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>stdDir = &#8220;standards/&#8221; - sets the directory containing the standards in</dt>
+<dd><p class="first last">the &#8220;all_stds/&#8221;, &#8220;all_plat/&#8221;, &#8220;all_dirt/&#8221; and &#8220;all_masks&#8221; directories.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>name = &#8216;&#8217; - name of the image. Used when making the histogram image for</dt>
+<dd><p class="first last">the histogram method.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>outDir = &#8220;Output/&#8221; - specifies the directory to output. Used when making</dt>
+<dd><p class="first last">the histogram image for the histogram method.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">verbose = False - makes the function verbose.</p>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.blankDataDict">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">blankDataDict</code><span class="sig-paren">(</span><em>MoDirt='mo'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#blankDataDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.blankDataDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a data dictionary of the format used in analyzImgOrFolder where all 
+of the data points are replaced with &#8220;&#8217;&#8211;&#8221; as a filler.&#8221;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.blankImg">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">blankImg</code><span class="sig-paren">(</span><em>dims=(100</em>, <em>100)</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#blankImg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.blankImg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a white image given the dimensions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.compareToStandards">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">compareToStandards</code><span class="sig-paren">(</span><em>method</em>, <em>res</em>, <em>STDpath='standards/all_stds'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#compareToStandards"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.compareToStandards" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a csv file of the standard data</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.ifFloatRound">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">ifFloatRound</code><span class="sig-paren">(</span><em>num</em>, <em>rnd</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#ifFloatRound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.ifFloatRound" title="Permalink to this definition">¶</a></dt>
+<dd><p>If num is a float, returns num rounded by rnd digits.
+Otherwise just return num. 
+Prevents errors by rounding strings</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="GenSIP.nexus.makeStandardReport">
+<code class="descclassname">GenSIP.nexus.</code><code class="descname">makeStandardReport</code><span class="sig-paren">(</span><em>res</em>, <em>MoDirt='mo'</em>, <em>stdDir='standards/'</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/GenSIP/nexus.html#makeStandardReport"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#GenSIP.nexus.makeStandardReport" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the resolution, creates a CSV file that compares each of the methods to
+the standard method side-by-side. 
+Inputs</p>
+<blockquote>
+<div><ul class="simple">
+<li>res - resolution of the image, in microns^2/pixel area</li>
+</ul>
+</div></blockquote>
+<dl class="docutils">
+<dt>KEY-WORD ARGUMENTS:</dt>
+<dd><ul class="first last">
+<li><p class="first">MoDirt = &#8216;Mo&#8217; - option to do molybdenum or dirt analysis</p>
+</li>
+<li><dl class="first docutils">
+<dt>stdDir = &#8220;standards/&#8221; - sets the directory containing the standards in</dt>
+<dd><p class="first last">the &#8220;all_stds/&#8221;, &#8220;all_plat/&#8221;, &#8220;all_dirt/&#8221; and &#8220;all_masks&#8221; directories.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">verbose = False - makes the function verbose.</p>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-contents">
+<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-GenSIP"></span><p>The GenSIP Package</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GenSIP package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-GenSIP.GenGUI">GenSIP.GenGUI module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.exampleScript">GenSIP.exampleScript module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.functions">GenSIP.functions module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.gencsv">GenSIP.gencsv module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.kuwahara">GenSIP.kuwahara module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.measure">GenSIP.measure module</a></li>
+<li><a class="reference internal" href="#module-GenSIP.nexus">GenSIP.nexus module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to GenSIP&#8217;s documentation!</a></li>
+      <li>Next: <a href="GenSIP.bigscans.html" title="next chapter">GenSIP.bigscans package</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GenSIP.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/GenSIP.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.bigscans.images &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.bigscans.images</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the functions used to deal with a large panorama image such </span>
+<span class="sd">as those used in analyzing the big foil scans. </span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">GenSIP.kuwahara</span> <span class="kn">as</span> <span class="nn">K</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">misc</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+
+<div class="viewcode-block" id="splitImage"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.images.splitImage">[docs]</a><span class="k">def</span> <span class="nf">splitImage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">numParts</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;InputPicts/FoilScans/Q1&quot;</span><span class="p">,</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes an image and divides it up into a number of sub-images specified by </span>
+<span class="sd">    numParts. writes the output to a folder in the path folder and names it </span>
+<span class="sd">    &quot;sub_imgs_&quot;+name.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - image - the image to be divided</span>
+<span class="sd">         - numParts - the number of sub-Images to be produced. Must be a perfect</span>
+<span class="sd">            square.</span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">         - path - path to the folder to contain the subimages folder</span>
+<span class="sd">         - name - name of the images produced</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">perSide</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">numParts</span><span class="p">))</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="n">h_unit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">height</span><span class="o">/</span><span class="n">perSide</span><span class="p">)</span>
+    <span class="n">w_unit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">width</span><span class="o">/</span><span class="n">perSide</span><span class="p">)</span>
+    <span class="n">h_rem</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">height</span><span class="o">%</span><span class="n">perSide</span><span class="p">)</span>
+    <span class="n">w_rem</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">width</span><span class="o">%</span><span class="n">perSide</span><span class="p">)</span>
+    <span class="n">start_col</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">start_row</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="c"># Create output folder</span>
+    <span class="n">outPath</span> <span class="o">=</span> <span class="n">path</span><span class="o">+</span><span class="s">&quot;/sub_imgs_&quot;</span><span class="o">+</span><span class="n">name</span>
+    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outPath</span><span class="p">)):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outPath</span><span class="p">)</span>
+    
+    
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">perSide</span><span class="p">):</span> <span class="c"># Column</span>
+        <span class="c">#print &quot;Starting Row &quot; + str(r)</span>
+        <span class="n">stop_row</span> <span class="o">=</span> <span class="n">h_unit</span> <span class="o">+</span> <span class="n">r</span><span class="o">*</span><span class="n">h_unit</span>
+        
+        <span class="k">if</span> <span class="n">r</span> <span class="o">==</span> <span class="n">perSide</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">stop_row</span> <span class="o">+=</span> <span class="n">h_rem</span> <span class="o">-</span> <span class="mi">1</span>
+        
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">perSide</span><span class="p">):</span> <span class="c"># Row</span>
+            <span class="c">#print &quot;Row: &quot; + str(r) +&quot; Column: &quot; + str(c)</span>
+            <span class="n">stop_col</span> <span class="o">=</span> <span class="n">w_unit</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">w_unit</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">start_col</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="n">perSide</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">stop_col</span> <span class="o">+=</span> <span class="n">w_rem</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">subImage</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="n">start_row</span><span class="p">:</span><span class="n">stop_row</span><span class="p">,</span><span class="n">start_col</span><span class="p">:</span><span class="n">stop_col</span><span class="p">]</span>
+            <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">            print &quot;Subimage Made. Writing Image...&quot;</span>
+<span class="sd">            print &quot;Start_row: &quot; + str(start_row)</span>
+<span class="sd">            print &quot;Stop_row: &quot; + str(stop_row)</span>
+<span class="sd">            print &quot;Start_col: &quot; + str(start_col)</span>
+<span class="sd">            print &quot;Stop_col: &quot; + str(stop_col)</span>
+<span class="sd">            print &quot;Image shape: &quot; + str(subImage.shape)</span>
+<span class="sd">            &#39;&#39;&#39;</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">outPath</span><span class="o">+</span><span class="s">&quot;/sub_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;.tif&quot;</span><span class="p">),</span><span class="n">subImage</span><span class="p">)</span>
+        
+            <span class="n">start_col</span> <span class="o">=</span> <span class="n">stop_col</span><span class="o">+</span><span class="mi">1</span>
+            
+        <span class="n">start_row</span> <span class="o">=</span> <span class="n">stop_row</span><span class="o">+</span><span class="mi">1</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="stitchImage"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.images.stitchImage">[docs]</a><span class="k">def</span> <span class="nf">stitchImage</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">imgType</span> <span class="o">=</span> <span class="s">&quot;.png&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">CV_LOAD_IMAGE_GRAYSCALE</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method takes a folder of sub-images and stitches them back together and</span>
+<span class="sd">    writes the resulting image to a large montage image named &quot;montage.png&quot; in </span>
+<span class="sd">    the given folder.</span>
+<span class="sd">    </span>
+<span class="sd">    Input Arguments:</span>
+<span class="sd">        - folderpath - path to the folder containing the sub-images</span>
+<span class="sd">    Key-Word Arguments:</span>
+<span class="sd">        - imgType - type of image file contained in subfolder (i.e. .jpeg, .png,</span>
+<span class="sd">          .tif, etc.) it is important to include the &#39;.&#39; at the beginning. Default</span>
+<span class="sd">          set to &quot;.png&quot;.</span>
+<span class="sd">        - color - specifies whether the images are to be loaded in color or </span>
+<span class="sd">          grayscale. </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">subImgs</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">folderpath</span><span class="p">)</span>
+    <span class="n">subImgs</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="n">montageHeight</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">montageWidth</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="c"># Make sure that the folder of sub-images only contains the sub images to be</span>
+    <span class="c"># stitched together.</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    for img in subImgs:</span>
+<span class="sd">        if not(img.startswith(&quot;sub_&quot;)):</span>
+<span class="sd">            subImgs.remove(img)</span>
+<span class="sd">            print img</span>
+<span class="sd">        elif not(img.endswith(&quot;.png&quot;)):</span>
+<span class="sd">            subImgs.remove(img)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">subImgs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">subImgs</span> <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;sub_&quot;</span><span class="p">)]</span>
+    <span class="n">subImgs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">subImgs</span> <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">imgType</span><span class="p">)]</span>
+    
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">subImgs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;You may have specified the wrong image Type.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">getIndex</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;sub_&quot;</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">imgType</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&quot;_&quot;</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+        <span class="k">return</span> <span class="n">index</span>
+        
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">subImgs</span><span class="p">:</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">getIndex</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">folderpath</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">img</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">montageHeight</span> <span class="o">+=</span> <span class="n">sub</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">montageWidth</span> <span class="o">+=</span> <span class="n">sub</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">del</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+    <span class="c">#return (montageHeight,montageWidth)</span>
+    <span class="c"># See if image is meant to be loaded in color or not. If so, make </span>
+    <span class="c"># the montage a color image (a 3D array with the 3rd dimension as RGB)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">folderpath</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">subImgs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">color</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+        <span class="n">is3D</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">montage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">montageHeight</span><span class="p">,</span><span class="n">montageWidth</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">is3D</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">montage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">montageHeight</span><span class="p">,</span><span class="n">montageWidth</span><span class="p">))</span>
+        
+    <span class="c"># Initialize iterating variables for the for loop:</span>
+    <span class="n">lastindex</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">lastSubW</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">lastSubH</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">subImgs</span><span class="p">:</span>
+        <span class="c"># index gives the tuple index of the sub-image in the montage matrix</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">getIndex</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+        
+        <span class="c">#list index gives the index of the sub-image in the list of subImgs</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        listIndex = subImgs.index(img)</span>
+<span class="sd">        </span>
+<span class="sd">        if listIndex&lt;len(subImgs)-1:</span>
+<span class="sd">            nextIndex = getIndex(subImgs[listIndex+1])</span>
+<span class="sd">        else:</span>
+<span class="sd">            nextIndex = (0,0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># Load the sub image</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">folderpath</span><span class="o">+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">img</span><span class="p">,</span><span class="n">color</span><span class="p">)</span>
+        <span class="c"># Assign the height and width of the sub-image to subH and subW</span>
+        <span class="c"># Check to see if the image is in color when loaded. If so, convert</span>
+        <span class="c"># from BGR to RGB since Opencv by default loads the image as BGR.</span>
+        <span class="k">if</span> <span class="n">is3D</span><span class="p">:</span>
+            <span class="n">subH</span><span class="p">,</span><span class="n">subW</span><span class="p">,</span><span class="n">rgb</span> <span class="o">=</span> <span class="n">sub</span><span class="o">.</span><span class="n">shape</span>
+            <span class="n">sub</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span><span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2RGB</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">subH</span><span class="p">,</span><span class="n">subW</span> <span class="o">=</span> <span class="n">sub</span><span class="o">.</span><span class="n">shape</span>
+        
+        <span class="c"># Set the variables for the indices in the montage over which the </span>
+        <span class="c"># sub-image will be inserted. These variables are set according to </span>
+        <span class="c"># the relationship between the current sub-image index and the last</span>
+        <span class="c"># sub-image index, to see if the current sub-image starts a new row.</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c"># if the sub-image is part of the first row</span>
+            <span class="n">lastSubH</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">subH</span>
+        <span class="k">elif</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">lastindex</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+        <span class="c"># if the sub-image is the start of a new row but is not</span>
+        <span class="c"># in the first row. </span>
+            <span class="n">lastSubH</span> <span class="o">=</span> <span class="n">height</span>
+            <span class="n">height</span> <span class="o">+=</span> <span class="n">subH</span>
+            
+        <span class="k">if</span> <span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c"># if the sub-image is the start of a new row</span>
+            <span class="n">lastSubW</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">subW</span>
+            
+        <span class="k">elif</span> <span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">lastindex</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+        <span class="c"># if the sub-image continues a row</span>
+            <span class="n">lastSubW</span> <span class="o">=</span> <span class="n">width</span>
+            <span class="n">width</span> <span class="o">+=</span> <span class="n">subW</span>
+        <span class="k">print</span> <span class="n">img</span>
+        
+        <span class="c"># Insert the sub-image into the montage:</span>
+        <span class="n">montage</span><span class="p">[</span><span class="n">lastSubH</span><span class="p">:</span><span class="n">height</span><span class="p">,</span><span class="n">lastSubW</span><span class="p">:</span><span class="n">width</span><span class="p">]</span><span class="o">=</span><span class="n">sub</span><span class="p">[:,:]</span>
+        <span class="c"># Iterate the variable lastindex:</span>
+        <span class="n">lastindex</span> <span class="o">=</span> <span class="n">index</span>
+        
+    <span class="c"># Write the montage image to the folder containing</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">folderpath</span><span class="o">+</span><span class="s">&quot;/montage.png&quot;</span><span class="p">,</span><span class="n">montage</span><span class="p">,[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+    
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="makeManyPosters"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.images.makeManyPosters">[docs]</a><span class="k">def</span> <span class="nf">makeManyPosters</span><span class="p">(</span><span class="n">foldername</span><span class="p">,</span><span class="n">foilname</span><span class="o">=</span><span class="s">&quot;40360_2&quot;</span><span class="p">,</span> <span class="n">Quarter</span><span class="o">=</span><span class="s">&quot;Q1&quot;</span><span class="p">,</span><span class="n">Mask</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">kern</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>\
+<span class="n">KuSize</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span><span class="n">Gaus1</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">Gaus2</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span><span class="n">rsize</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span><span class="n">Kuw_only</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ExcludeDirt</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Runs BIGmakeposter on a set of images in a folder and saves them to a new </span>
+<span class="sd">    poster folder.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">foldername</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">Kuw_only</span><span class="p">:</span>
+        <span class="n">maps</span><span class="o">=</span><span class="s">&quot;/KuwaharaMaps&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">maps</span> <span class="o">=</span> <span class="s">&quot;/PosterMaps&quot;</span>
+    
+    <span class="n">outFolder</span> <span class="o">=</span> <span class="s">&#39;Output/Output_&#39;</span><span class="o">+</span><span class="n">foilname</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">Quarter</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outFolder</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outFolder</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="n">maps</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="n">maps</span><span class="p">)</span>
+    
+        
+    <span class="k">for</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">images</span><span class="p">:</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">loadImg</span><span class="p">(</span><span class="n">foldername</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">image</span><span class="p">)</span>
+        <span class="n">root</span><span class="p">,</span><span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        <span class="n">poster</span> <span class="o">=</span> <span class="n">bigPostPreProc</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">Mask</span><span class="p">,</span><span class="n">kern</span><span class="p">,</span><span class="n">KuSize</span><span class="p">,</span><span class="n">Gaus1</span><span class="p">,</span><span class="n">Gaus2</span><span class="p">,</span><span class="n">rsize</span><span class="p">,</span><span class="n">Kuw_only</span><span class="p">,</span><span class="n">ExcludeDirt</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">outFolder</span><span class="o">+</span><span class="n">maps</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="n">root</span><span class="o">+</span><span class="s">&quot;.png&quot;</span><span class="p">,</span><span class="n">poster</span><span class="p">,</span> \
+        <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">cv</span><span class="o">.</span><span class="n">CV_IMWRITE_PNG_COMPRESSION</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+        <span class="k">print</span> <span class="n">image</span>
+  
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+     </div>
+<div class="viewcode-block" id="bigPostPreProc"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.images.bigPostPreProc">[docs]</a><span class="k">def</span> <span class="nf">bigPostPreProc</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method takes the image of the foil and creates a smoothed Kuwahara image</span>
+<span class="sd">    used to make the poster for regional thresholding.</span>
+<span class="sd">        Inputs:</span>
+<span class="sd">         - image - the image to perform preprocessing on.</span>
+<span class="sd">        Key-Word Arguments:</span>
+<span class="sd">             - Mask = 0 - Assign the Mask here</span>
+<span class="sd">             - KuSize = 17 - Size of Kuwahara Filter</span>
+<span class="sd">             - Gaus1 = 3 - Size of first Gaussian Blur</span>
+<span class="sd">             - Gaus2 = 11 - Size of second Gaussian Blur</span>
+<span class="sd">             - rsize = .1 - Resize value</span>
+<span class="sd">             - Kuw_only = False - Option to only return the Kuwahara filtered image</span>
+<span class="sd">             - ExcludeDirt = True - Option to Exclude dirt </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># The keyword </span>
+    <span class="n">Mask</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Mask&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> <span class="c"># Assign the Mask here</span>
+    <span class="n">KuSize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;KuSize&quot;</span><span class="p">,</span><span class="mi">17</span><span class="p">)</span> <span class="c"># Size of Kuwahara Filter</span>
+    <span class="n">Gaus1</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Gaus1&quot;</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="c"># Size of first Gaussian Blur</span>
+    <span class="n">Gaus2</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Gaus2&quot;</span><span class="p">,</span><span class="mi">11</span><span class="p">)</span> <span class="c"># Size of second Gaussian Blur</span>
+    <span class="n">rsize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;rsize&quot;</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span> <span class="c"># Resize value</span>
+    <span class="n">Kuw_only</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;Kuw_only&quot;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span> <span class="c"># Option to only return the Kuwahara filtered image</span>
+    <span class="n">ExcludeDirt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ExcludeDirt&quot;</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span> <span class="c"># Option to Exclude dirt </span>
+
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="n">averageColor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">img</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">ExcludeDirt</span><span class="p">:</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">img</span><span class="o">&lt;=</span><span class="mi">40</span><span class="p">]</span><span class="o">=</span><span class="n">averageColor</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span><span class="o">==</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="ow">and</span> <span class="n">Mask</span><span class="o">.</span><span class="n">shape</span><span class="o">==</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="n">invMsk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">Mask</span><span class="p">)</span>
+        <span class="n">invMsk</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">image</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="n">invMsk</span><span class="o">/</span><span class="mi">255</span><span class="p">)</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">invMsk</span><span class="p">)</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">img</span><span class="o">&gt;</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">image</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">image</span><span class="p">))</span>
+        
+    <span class="n">rsz</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">rsize</span><span class="p">,</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Kuw_only</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rsz</span>
+    <span class="n">gr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rsz</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus1</span><span class="p">,</span><span class="n">Gaus1</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">kgr</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">Kuwahara</span><span class="p">(</span><span class="n">gr</span><span class="p">,</span><span class="n">KuSize</span><span class="p">)</span>
+    <span class="n">kgr</span> <span class="o">=</span> <span class="n">kgr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span> <span class="c"># Make sure the Kuwahara image is uint8 so it doesn&#39;t scale</span>
+    <span class="n">rkgr</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">imresize</span><span class="p">(</span><span class="n">kgr</span><span class="p">,(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span><span class="n">interp</span><span class="o">=</span><span class="s">&#39;bicubic&#39;</span><span class="p">)</span>
+    <span class="n">grkgr</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">rkgr</span><span class="p">,</span> <span class="p">(</span><span class="n">Gaus2</span><span class="p">,</span><span class="n">Gaus2</span><span class="p">),</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">Kuw_only</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rkgr</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">grkgr</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+       </div>
+<div class="viewcode-block" id="bigPosterfy"><a class="viewcode-back" href="../../../GenSIP.bigscans.html#GenSIP.bigscans.images.bigPosterfy">[docs]</a><span class="k">def</span> <span class="nf">bigPosterfy</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">k_size</span><span class="o">=</span><span class="mi">6</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes a gray image and sets all values within a given range to a single value</span>
+<span class="sd">    this way we can divide up regions into high Exposure areas, primarily Pt, </span>
+<span class="sd">    primarily Mo, dirt, or black. The only difference between bigPosterfy and </span>
+<span class="sd">    posterfy found in GenSIP.functions is the additional &#39;highEx&#39; region. This</span>
+<span class="sd">    is added because the large foils have more fluctuation in topography, and </span>
+<span class="sd">    hence various levels of contrast and exposure. </span>
+<span class="sd">    </span>
+<span class="sd">    Kwargs:</span>
+<span class="sd">        - k_size - size of the kernal used in the final morphological opening</span>
+<span class="sd">            step. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">image_copy</span><span class="o">=</span><span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">image_copy</span><span class="o">=</span><span class="n">image_copy</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">blk</span><span class="o">=</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">pleat</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">40</span><span class="p">)</span>
+    <span class="n">darkMo</span><span class="o">=</span><span class="p">(</span><span class="mi">41</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">139</span><span class="p">)</span>
+    <span class="n">Mo</span><span class="o">=</span><span class="p">(</span><span class="mi">140</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">195</span><span class="p">)</span>
+    <span class="n">highEx</span><span class="o">=</span><span class="p">(</span><span class="mi">196</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">image_copy</span><span class="o">&lt;=</span><span class="mi">215</span><span class="p">)</span>
+    <span class="n">Plat</span><span class="o">=</span><span class="p">(</span><span class="mi">216</span><span class="o">&lt;=</span><span class="n">image_copy</span><span class="p">)</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">blk</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">pleat</span><span class="p">]</span><span class="o">=</span><span class="mi">50</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">darkMo</span><span class="p">]</span><span class="o">=</span><span class="mi">85</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">Mo</span><span class="p">]</span><span class="o">=</span><span class="mi">150</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">highEx</span><span class="p">]</span><span class="o">=</span><span class="mi">200</span>
+    <span class="n">image_copy</span><span class="p">[</span><span class="n">Plat</span><span class="p">]</span><span class="o">=</span><span class="mi">255</span>
+    <span class="c">#image_copy = maskEdge(image_copy,thickness=60)</span>
+    <span class="c">#Do a morphological opening step to eliminate the rough edges</span>
+    <span class="c"># I prefer opening over closing because it is more important to catch</span>
+    <span class="c"># all of the dark areas, as the Pt areas will have pretty sraightforward</span>
+    <span class="c"># threshold results</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">k_size</span><span class="p">,</span><span class="n">k_size</span><span class="p">))</span>
+    <span class="c">#image_copy = cv2.morphologyEx(image_copy, cv2.MORPH_OPEN, kernel)</span>
+    <span class="k">return</span> <span class="n">image_copy</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

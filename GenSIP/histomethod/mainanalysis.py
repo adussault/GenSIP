@@ -1,7 +1,7 @@
-
-
+# -*- coding: utf-8 -*-
 """
-Contains functions for running the new methods of analyzing the foils.
+mainanalysis Contains functions for running the histogram method of analyzing the
+foils. 
 """
 import cv2
 import numpy as np
@@ -19,7 +19,9 @@ import GenSIP.histomethod.display as dis
 
 import os
 
+###################################################################################
 
+###################################################################################
 
 def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
                  genPoster = False, exten='.tif', verbose=True, genResults=True):
@@ -65,14 +67,14 @@ def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
         mask = fun.loadImg(masks[i])
         if genPoster:
             PtMap, DirtMap, Data, post = analyzeByHisto(img,res,
-                                                        returnPoster=True,
+                                                        genPoster=True,
                                                         Mask=mask,
                                                         verbose=verbose)
             cv2.imwrite("Output/"+name+"/PosterMaps/"+subNames[i]+".png",
                         post, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
         else:
             PtMap, DirtMap, Data = analyzeByHisto(img,res,
-                                                  returnPoster=False,
+                                                  genPoster=False,
                                                   Mask=mask,
                                                   verbose=verbose)
                                                   
@@ -113,11 +115,41 @@ def runOnSubImgs(folderpath, maskPath, res, name, writeToCSV=True,
 
 def analyzeByHisto(img,res,
                    Mask=0,           verbose=True,
-                   MoDirt='mo',      returnPoster=False,
+                   MoDirt='mo',      genPoster=False,
                    returnData=False, returnSizes=True):
     """
-    Runs the newmethod analysis on an image. 
-    
+    Runs the histogram analysis on an image. 
+    Inputs: 
+        - img - image as a numpy.ndarray
+        - res - resolution of the image in square microns/pixel
+    Key-Word Arguments:
+        - Mask - mask of the image, must have the same dimensions as img. if set 
+                to 0, no mask is used. 
+        - MoDirt - option to perform molybdenum or dirt analysis on the image
+        - MaskEdges = True - option to automatically mask off the background if 
+            set to True
+        - returnData = False - 
+        - 
+        - retSizes = False - option to return the raw dirt sizes in pixel area if set to True
+        - verbose = False - prints verbose output if set to True.
+    Returns 2 tuples (or 3 if retSizeData = True):
+        • stats - numerical molybdenum or dirt data:
+            - numDirt - number of dirt particles
+            - Area
+            - AreaDirt - total area of dirt particles in square microns
+            - Perc - percentage of foil covered in dirt
+            <optional if retSizeData=True>:
+            - MeanSize
+            - MaxSize - 
+            - percAreaOver100 - Percent of particles with an approximate diameter 
+                                greater than 100 microns
+            <optional if retSizes=True>:
+            - sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)
+                      of each dirt particle in pixels 
+                      
+        • picts - the thresholded dirt or platinum images and poster
+            - threshed
+            - poster
     """
     if MoDirt!='both':
         MoDirt=fun.checkMoDirt(MoDirt)
@@ -147,7 +179,10 @@ def analyzeByHisto(img,res,
     PtMap[PtMap!=0]=1
     
     # Extract the foil area from the Data dictionary
-    FoilArea = getFoilArea(Data)*res*10**-6
+    if type(Mask)==np.ndarray:
+        FoilArea = Mask[Mask!=0].size*res*10**-6
+    else:
+        FoilArea = img.size*res*10**-6
     
     # Calculate the Pt Area
     PtArea = meas.calcExposedPt(PtMap,res, getAreaInSquaremm=True)
@@ -170,7 +205,7 @@ def analyzeByHisto(img,res,
         print "Sizes: " + str(dirtSizes)
         
     # Make the return tuples depending on the value of MoDirt and the return 
-    # options returnPoster, returnData, and returnSizes
+    # options genPoster, returnData, and returnSizes
     if MoDirt=='mo':
         stats = [PtArea, PercPt]
         picts = [PtMap]
@@ -192,7 +227,7 @@ def analyzeByHisto(img,res,
     if returnData:
         stats.append(Data)
         
-    if returnPoster:
+    if genPoster:
         picts.append(post)
         
     return tuple(stats), tuple(picts)
@@ -221,7 +256,10 @@ def generateMapsAndData (img, Mask=0,verbose=False, genPoster=False, genProc=Fal
         ret.append(proc)
     ret.append(Data)
     return tuple(ret)
-                    
+
+###################################################################################
+
+###################################################################################
 
 def getFoilArea (Data):
     """ 
@@ -319,7 +357,6 @@ def NewRegThresh(ogimage, Data, Mask=0, MoDirt='Mo', returnData = False, verbose
     Allsum = 0
     MoSum = 0
     DirtSum = 0
-    CrackSum = 0
     
     PtMap = np.zeros(ogimage.shape).astype(np.uint8)
     DirtMap = np.zeros(ogimage.shape).astype(np.uint8)

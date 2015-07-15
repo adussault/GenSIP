@@ -1,0 +1,38 @@
+GenSIP.bigscans package
+=======================
+
+Submodules
+----------
+
+GenSIP.bigscans.bigcalibrate module
+-----------------------------------
+
+.. automodule:: GenSIP.bigscans.bigcalibrate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.bigscans.bigfoils module
+-------------------------------
+
+.. automodule:: GenSIP.bigscans.bigfoils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.bigscans.images module
+-----------------------------
+
+.. automodule:: GenSIP.bigscans.images
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: GenSIP.bigscans
+    :members:
+    :undoc-members:
+    :show-inheritance:

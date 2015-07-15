@@ -124,6 +124,7 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
     returnMask=kwargs.get('returnMask',0)
     Mask=kwargs.get('Mask',0)
     MoDirt=kwargs.get('MoDirt','dirt')
+    verbose = kwargs.get('verbose',True)
     
     if poster.shape != ogimage.shape:
         raise Exception("The poster is not the same shape as the original image.")
@@ -146,6 +147,23 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
     Mo[Mo!=150]=0
     Pt[Pt!=255]=0
     
+    if verbose:
+        print "'Platinum' region (poster graylevel 255):"
+        print "    Threshold value = " + str(pt)
+        print "    Number of pixels in region = " + str(Pt[Pt==255].size)
+        print "'Molybdenum' region (poster graylevel 150):"
+        print "    Threshold value = " + str(m)
+        print "    Number of pixels in region = " + str(Mo[Mo==150].size)
+        print "'Dark Molybdenum' region (poster graylevel 85):"
+        print "    Threshold value = " + str(d)
+        print "    Number of pixels in region = " + str(darkMo[darkMo==85].size)
+        print "'Pleat' region (poster graylevel 50):"
+        print "    Threshold value = " + str(p)
+        print "    Number of pixels in region = " + str(pleat[pleat==85].size)
+        print "'Black' region (poster graylevel 0) masked off from analysis"
+        print "    Number of pixels in region = " + str(blk[blk==0].size)
+
+              
     # mask the original image
     pleatMask = cv2.GaussianBlur(Image, (5,5), 0)
     pleatMask = (pleat/50)*pleatMask
@@ -161,6 +179,7 @@ def regionalThresh(ogimage,poster,p=8,d=28,m=55,pt=60,**kwargs):
     ret,darkMo = cv2.threshold(darkMoMask, d,255,threshType)
     ret,MoMask = cv2.threshold(MoMask, m,255,threshType)
     ret,PtMask = cv2.threshold(PtMask, pt,255,threshType)
+      
     # put it all together
     threshedImage = np.add(threshedImage, pleat)
     threshedImage = np.add(threshedImage, darkMo)
@@ -319,7 +338,7 @@ def loadImg (path, flag=cv2.CV_LOAD_IMAGE_GRAYSCALE):
 
 ####################################################################################
 
-def getDateString():
+def getDateString(minSep="."):
     """
     Get the date and time formated as "mm-dd-yyyy hh:minminAM"
     """
@@ -333,7 +352,7 @@ def getDateString():
     else:
         end = "PM"
         hour = str(t.tm_hour)
-    datestring = str(t.tm_mon)+'-'+str(t.tm_mday)+'-'+str(t.tm_year)+' '+hour+'.'+str(t.tm_min)+end # Ex: "4-21-2015 3.50PM"
+    datestring = str(t.tm_mon)+'-'+str(t.tm_mday)+'-'+str(t.tm_year)+' '+hour+minSep+str(t.tm_min)+end # Ex: "4-21-2015 3.50PM"
     return datestring
     
 ####################################################################################

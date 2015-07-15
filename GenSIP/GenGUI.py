@@ -1,3 +1,16 @@
+"""
+GenGUI is a module that creates a GUI that allows the user to make adjustments to
+an image and play with the threshold value and threshold methods. 
+To use:
+    1. Run this file in python/iPython
+    2. load the image you want to analyze as an ndarray using fun.loadImg(filepath)
+    3. Call GUIfy using that ndarray as input
+This module hasn't been updated in a while and was rather haphazard from the 
+beginning, so it may not work very well, and not all features will work, but it 
+still should basically function. 
+
+"""
+
 import Tkinter as Tk
 import cv2
 import matplotlib.pyplot as plt

@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.gencsv &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.gencsv</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains class that handles all data writing and saving to csv</span>
+<span class="sd">file format for GenSIP.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">socket</span> <span class="kn">import</span> <span class="n">gethostname</span>
+
+<span class="c">###################################################################################</span>
+
+<span class="c">###################################################################################</span>
+
+<div class="viewcode-block" id="DataToCSV"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV">[docs]</a><span class="k">class</span> <span class="nc">DataToCSV</span> <span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class that contains methods that write data from data dictionaries to </span>
+<span class="sd">    a specifically formatted SV file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">filepath</span><span class="p">,</span><span class="n">title</span><span class="p">,</span><span class="n">mode</span><span class="o">=</span><span class="s">&#39;w+b&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates a CSV file. </span>
+<span class="sd">                filepath - path of CSV file</span>
+<span class="sd">                title - a string denoting the test being run. For cleantests, this</span>
+<span class="sd">                    is the sample set string. </span>
+<span class="sd">            Kwargs:</span>
+<span class="sd">                mode = &#39;w+b&#39; - default set to allow writing.&quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">title</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&quot;Title must be a string&quot;</span>
+        <span class="k">if</span> <span class="n">filepath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.csv&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span><span class="n">title</span><span class="o">+</span><span class="s">&#39;.csv&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Path must be a directory or .csv file: {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">CSVfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataWriter</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CSVfile</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AllRows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">TitleRow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">makeTitle</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writeHeader</span><span class="p">(</span><span class="n">TitleRow</span><span class="p">)</span>
+
+    <span class="c">###################################################################################</span>
+        
+<div class="viewcode-block" id="DataToCSV.makeTitle"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.makeTitle">[docs]</a>    <span class="k">def</span> <span class="nf">makeTitle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Makes the title row (first row) of the CSV file based off of the title </span>
+<span class="sd">        vairable.</span>
+<span class="sd">        Inputs: title string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">TitleRow</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;GenSIP Data&quot;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">]</span>
+        <span class="c"># Special Case for sample set strings for cleaning tests</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isCleaningTest</span><span class="p">():</span> 
+                <span class="k">if</span> <span class="n">title</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&quot;NF&quot;</span><span class="p">):</span>
+                    <span class="n">TitleRow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;non-flight foils&quot;</span>
+                    <span class="n">TitleRow</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;NF&quot;</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; Test&quot;</span>
+                <span class="k">elif</span> <span class="n">title</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&quot;F&quot;</span><span class="p">):</span>
+                    <span class="n">TitleRow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;non-flight foils&quot;</span>
+                    <span class="n">TitleRow</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;NF&quot;</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; Test&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">TitleRow</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+            
+        <span class="k">return</span> <span class="n">TitleRow</span>
+        
+    <span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="DataToCSV.isCleaningTest"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.isCleaningTest">[docs]</a>    <span class="k">def</span> <span class="nf">isCleaningTest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks to see if the particular test is a cleaning test, by looking to see </span>
+<span class="sd">        if the title is all capitalized and ends with an F (as in BGF or BGNF</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Title</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Title</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&quot;F&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span>
+        
+    <span class="c">###################################################################################</span>
+    </div>
+<div class="viewcode-block" id="DataToCSV.writeHeader"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.writeHeader">[docs]</a>    <span class="k">def</span> <span class="nf">writeHeader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">TitleRow</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;writes the header to the csv file given the first title row&quot;&quot;&quot;</span>
+        <span class="c"># Second row is the date and time of the run and the computer on which </span>
+        <span class="c"># this function was run:</span>
+        <span class="n">datestring</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">getDateString</span><span class="p">()</span>
+        <span class="n">host</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">gethostname</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Version</span> <span class="o">=</span> <span class="n">fun</span><span class="o">.</span><span class="n">getGenSIPVersion</span><span class="p">()</span>
+        <span class="n">InfoRow1</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Date:&quot;</span><span class="p">,</span> <span class="n">datestring</span><span class="p">]</span>
+        <span class="n">InfoRow2</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Computer:&quot;</span><span class="p">,</span> <span class="n">host</span><span class="p">]</span>
+        <span class="n">InfoRow3</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Last Modification:&quot;</span><span class="p">,</span> <span class="n">Version</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataWriter</span><span class="o">.</span><span class="n">writerows</span><span class="p">([</span><span class="n">TitleRow</span><span class="p">,</span><span class="n">InfoRow1</span><span class="p">,</span><span class="n">InfoRow2</span><span class="p">,</span><span class="n">InfoRow3</span><span class="p">,[</span><span class="s">&#39;&#39;</span><span class="p">]])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AllRows</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">TitleRow</span><span class="p">,</span><span class="n">InfoRow1</span><span class="p">,</span><span class="n">InfoRow2</span><span class="p">,</span><span class="n">InfoRow3</span><span class="p">,[</span><span class="s">&#39;&#39;</span><span class="p">]])</span>
+
+    <span class="c">###################################################################################</span>
+</div>
+<div class="viewcode-block" id="DataToCSV.writeDataFromDict"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.writeDataFromDict">[docs]</a>    <span class="k">def</span> <span class="nf">writeDataFromDict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataDict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Takes a dictionary argument with the data from an analysis fuction and </span>
+<span class="sd">        writes it to the csv file. Automatically creates column headers by </span>
+<span class="sd">        sorting alphabetically the individual pieces of data, or manually by </span>
+<span class="sd">        receiving a list describing the desired column headers. </span>
+<span class="sd">        This function should be easily generalized to receive any dictionary with the</span>
+<span class="sd">        format:</span>
+<span class="sd">            resultsDict = {</span>
+<span class="sd">                        &#39;item1&#39;:{&#39;result1&#39;:&lt;str or number&gt;,</span>
+<span class="sd">                                ...,</span>
+<span class="sd">                                &#39;resultN&#39;:&lt;str or number&gt;</span>
+<span class="sd">                                },</span>
+<span class="sd">                                </span>
+<span class="sd">                                ...</span>
+<span class="sd">                                </span>
+<span class="sd">                        &#39;itemN&#39;:{&#39;result1&#39;:&lt;str or number&gt;,</span>
+<span class="sd">                                ...,</span>
+<span class="sd">                                &#39;resultN&#39;:&lt;str or number&gt;</span>
+<span class="sd">                                }  </span>
+<span class="sd">                        &#39;TOTALS&#39;:{&#39;tot1&#39;:&lt;entry1&gt;,...,&#39;totN&#39;:&lt;entryN&gt;}</span>
+<span class="sd">                        &#39;OTHER_FOOTER_INFO&#39;:{&#39;other1:&lt;entry1&gt;,...,&#39;otherN&#39;:&lt;entryN&gt;}</span>
+<span class="sd">                        }   </span>
+<span class="sd">                            </span>
+<span class="sd">        In general &#39;item1&#39; to &#39;itemN&#39; will be the subimage names. </span>
+<span class="sd">        Inputs:</span>
+<span class="sd">            - dataDict - results dictionary formatted as described above.</span>
+<span class="sd">        Key-Word Arguments:</span>
+<span class="sd">            - FirstColHead = &#39;Foil&#39; - Header for the rows of items. </span>
+<span class="sd">            - footerItems = [&quot;TOTALS&quot;,&quot;TOTAL&quot;] - list of entries (keys in the dataDict)</span>
+<span class="sd">                that are to only be included in the footer. Usually this entry is a </span>
+<span class="sd">                subDictionary of totals or averages to be placed at the end of the </span>
+<span class="sd">                csv file. </span>
+<span class="sd">            - colHeads = 0 - option to give the column headers of the data. If</span>
+<span class="sd">                left at 0, writeDataFromDict will automatically create headers </span>
+<span class="sd">                from the result keys for each item. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">FirstColHead</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;FirstColHead&#39;</span><span class="p">,</span><span class="s">&#39;Foil&#39;</span><span class="p">)</span>
+        <span class="n">notItems</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;footerItems&#39;</span><span class="p">,[</span><span class="s">&quot;TOTALS&quot;</span><span class="p">,</span><span class="s">&quot;TOTAL&quot;</span><span class="p">])</span>
+        <span class="n">colHeads</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;colHeads&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">colHeadsProvided</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">colHeads</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">colHeadsProvided</span><span class="p">:</span>
+            <span class="n">colHeads</span> <span class="o">=</span> <span class="p">[</span><span class="n">FirstColHead</span><span class="p">]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">dataDict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">notItems</span><span class="p">)]</span>
+        <span class="n">names</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="n">Rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># if the column headers are not given, generate them from the items in the</span>
+        <span class="c"># Data dictionary.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">colHeadsProvided</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataDict</span><span class="p">[</span><span class="n">sub</span><span class="p">])</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                    <span class="n">Keys</span> <span class="o">=</span> <span class="n">dataDict</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                    <span class="n">Keys</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                    <span class="c"># Make sure all the keys in the subImg dictionary are </span>
+                    <span class="c"># accounted for in the colHeads</span>
+                    <span class="n">colHeads</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">Keys</span> <span class="k">if</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">dataDict</span><span class="p">[</span><span class="n">sub</span><span class="p">][</span><span class="n">k</span><span class="p">])</span><span class="o">!=</span><span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">colHeads</span><span class="p">)])</span>
+        <span class="n">Rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">colHeads</span><span class="p">)</span>
+        <span class="c"># Populate the rows for each item in the dictionary </span>
+        <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataDict</span><span class="p">[</span><span class="n">sub</span><span class="p">])</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&#39;&quot;</span><span class="o">+</span><span class="n">sub</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">colHeads</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="n">entry</span> <span class="o">=</span> <span class="n">dataDict</span><span class="p">[</span><span class="n">sub</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">,</span><span class="s">&quot;&#39;--&quot;</span><span class="p">)</span>
+                    <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+            <span class="n">Rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            
+        <span class="c"># Make the Footer</span>
+        <span class="c"># Separate the footer with a spacer row:</span>
+        <span class="n">spaceRow</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">]</span>
+        <span class="n">Rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spaceRow</span><span class="p">)</span>
+        <span class="c"># Make footer by iterating through the footer items </span>
+        <span class="n">footerItems</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">notItems</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">dataDict</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="n">footerItems</span><span class="p">:</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">cat</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;:&#39;</span><span class="p">]</span>
+            <span class="n">FooterRows</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataDict</span><span class="p">[</span><span class="n">cat</span><span class="p">])</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">dataDict</span><span class="p">[</span><span class="n">cat</span><span class="p">]:</span>
+                    <span class="n">footerEntry</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="n">dataDict</span><span class="p">[</span><span class="n">cat</span><span class="p">][</span><span class="n">k</span><span class="p">]]</span>
+                    <span class="n">FooterRows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">footerEntry</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">footerEntry</span> <span class="o">=</span> <span class="p">[</span><span class="n">dataDict</span><span class="p">[</span><span class="n">cat</span><span class="p">]]</span>
+                <span class="n">FooterRows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">footerEntry</span><span class="p">)</span>
+            <span class="n">Rows</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">FooterRows</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataWriter</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">Rows</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AllRows</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">Rows</span><span class="p">)</span>
+    
+    <span class="c">###################################################################################</span></div>
+<div class="viewcode-block" id="DataToCSV.writeRow"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.writeRow">[docs]</a>    <span class="k">def</span> <span class="nf">writeRow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataWriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        
+    <span class="c">###################################################################################</span></div>
+<div class="viewcode-block" id="DataToCSV.writeRows"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.writeRows">[docs]</a>    <span class="k">def</span> <span class="nf">writeRows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataWriter</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+        
+    <span class="c">###################################################################################</span></div>
+<div class="viewcode-block" id="DataToCSV.closeCSVFile"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.gencsv.DataToCSV.closeCSVFile">[docs]</a>    <span class="k">def</span> <span class="nf">closeCSVFile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Closes the CSV file&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CSVfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

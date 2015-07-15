@@ -1,0 +1,79 @@
+GenSIP package
+==============
+
+Subpackages
+-----------
+
+.. toctree::
+
+    GenSIP.bigscans
+    GenSIP.cleantests
+    GenSIP.histomethod
+
+Submodules
+----------
+
+GenSIP.GenGUI module
+--------------------
+
+.. automodule:: GenSIP.GenGUI
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.exampleScript module
+---------------------------
+
+.. automodule:: GenSIP.exampleScript
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.functions module
+-----------------------
+
+.. automodule:: GenSIP.functions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.gencsv module
+--------------------
+
+.. automodule:: GenSIP.gencsv
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.kuwahara module
+----------------------
+
+.. automodule:: GenSIP.kuwahara
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.measure module
+---------------------
+
+.. automodule:: GenSIP.measure
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+GenSIP.nexus module
+-------------------
+
+.. automodule:: GenSIP.nexus
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: GenSIP
+    :members:
+    :undoc-members:
+    :show-inheritance:

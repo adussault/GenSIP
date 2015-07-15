@@ -1,3 +1,4 @@
+"""Kuwahara filter implemented in python"""
 # First try at manually rewriting the Kuwahara function from Luca Balbi which was written
 # originally in MatLab
 import numpy as np

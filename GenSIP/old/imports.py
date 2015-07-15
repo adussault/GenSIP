@@ -1,7 +1,10 @@
+"""
 #===============================================================
 #========================###IMPORTS###==========================
 #===============================================================
 #This is the module that contains all imports that are used across GenSIP:
+Abandoned.
+"""
 
 #import relevant modules
 import cv2

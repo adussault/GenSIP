@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GenSIP.measure &mdash; GenSIP  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="GenSIP  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for GenSIP.measure</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains functions that measure the exposed platinum, dirt particles, molybdenum,</span>
+<span class="sd">etc. based on the thresholded images produced by analysis methods.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">mahotas</span> <span class="kn">as</span> <span class="nn">mh</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">GenSIP.functions</span> <span class="kn">as</span> <span class="nn">fun</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+             
+
+<div class="viewcode-block" id="calcExposedPt"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.calcExposedPt">[docs]</a><span class="k">def</span> <span class="nf">calcExposedPt</span> <span class="p">(</span><span class="n">Ptimage</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the area of exposed platinum in square millimeters.</span>
+<span class="sd">    Input is the thresholded platinum image and the image resolution, </span>
+<span class="sd">    in square microns per pixel. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;getAreaInSquaremm&#39;</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c"># Make sure the image minimum is 0 and the image is binary (all pixel values</span>
+    <span class="c"># are equal to either the maximum value or 0)</span>
+    <span class="k">if</span> <span class="n">Ptimage</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">!=</span><span class="mi">0</span> <span class="ow">or</span> <span class="n">Ptimage</span><span class="p">[(</span><span class="n">Ptimage</span><span class="o">!=</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Ptimage</span><span class="o">!=</span><span class="n">Ptimage</span><span class="o">.</span><span class="n">max</span><span class="p">())]</span><span class="o">.</span><span class="n">size</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+    <span class="c"># Make sure the image is binary</span>
+        <span class="k">if</span> <span class="n">Ptimage</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">==</span> <span class="n">Ptimage</span><span class="o">.</span><span class="n">min</span><span class="p">():</span>
+            <span class="k">print</span> <span class="s">&quot;Warning: Image is all white! Platinum area set to zero.&quot;</span>
+            <span class="n">areaPt</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">areaPt</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            ERROR: Image must be a binary image of 0 and a non-zero number.\n</span>
+<span class="sd">            Image Max: {0} \n</span>
+<span class="sd">            Image Min: {1} \n</span>
+<span class="sd">            Other values: {2}&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Ptimage</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                                        <span class="n">Ptimage</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+                                        <span class="n">Ptimage</span><span class="p">[(</span><span class="n">Ptimage</span><span class="o">!=</span><span class="n">Ptimage</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">&amp;</span><span class="p">(</span><span class="n">Ptimage</span><span class="o">!=</span><span class="n">Ptimage</span><span class="o">.</span><span class="n">max</span><span class="p">())]))</span>
+    <span class="c"># Convert to uint8 format</span>
+    <span class="n">plat</span> <span class="o">=</span> <span class="n">Ptimage</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="c"># Make sure the image is just made of 1s and 0s</span>
+    <span class="n">plat</span><span class="p">[</span><span class="n">plat</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+    <span class="c"># Area of Pt = sum of nonzero pixels x resolution x 10^-16</span>
+    <span class="n">areaPt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">plat</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span><span class="o">*</span><span class="n">res</span>
+    <span class="k">if</span> <span class="n">getAreaInSquaremm</span><span class="p">:</span> 
+        <span class="n">areaPt</span> <span class="o">=</span> <span class="n">areaPt</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span>
+    <span class="k">return</span> <span class="n">areaPt</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+    </div>
+<div class="viewcode-block" id="calcDirt"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.calcDirt">[docs]</a><span class="k">def</span> <span class="nf">calcDirt</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the number of dirt particles and the area of the foil covered by dirt</span>
+<span class="sd">    Takes a black and white image (white dirt on black foil)</span>
+<span class="sd">    Returns the number of dirt particles, the area of dirt particles, and a labelled image</span>
+<span class="sd">    inverse the colors since mahotas.label only works on white on black</span>
+<span class="sd">    </span>
+<span class="sd">        Key-word Arguments:</span>
+<span class="sd">            returnSizes=False</span>
+<span class="sd">                - Option that returns the sizes array as the third ouput if true</span>
+<span class="sd">            returnLabelled = False</span>
+<span class="sd">                - Option that returns the labelled array as the fourth output if true</span>
+<span class="sd">            foilIncluded = False</span>
+<span class="sd">                - If true than the input image includes the outline of the foil in</span>
+<span class="sd">                black and the bakcground in white.</span>
+<span class="sd">            areaInSqmm = False</span>
+<span class="sd">                - Option to return the areaDirt in square mm rather than sq microns.</span>
+<span class="sd">            BoundConds = np.ones((3,3))</span>
+<span class="sd">                - Structuring element that tells the mahotas label function which</span>
+<span class="sd">                nearest neighbors to consider as part of the same region. Default</span>
+<span class="sd">                set to a 3x3 matrix of ones so it will consider the 8 nearest neighbors.</span>
+<span class="sd">            minPartArea = 0</span>
+<span class="sd">                - Minimum dirt particle area to be considered in the count and area</span>
+<span class="sd">                approximation. In square microns. Default set to 0.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">returnSizes</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;returnSizes&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">returnLabelled</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;returnLabelled&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">foilIncluded</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;foilIncluded&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">getAreaInSquaremm</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;getAreaInSquaremm&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">BoundConds</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;BoundConds&#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">)))</span>
+    <span class="n">minPartArea</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;minPartArea&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c"># Make sure the image is binary</span>
+    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">==</span> <span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">():</span>
+        <span class="k">print</span> <span class="s">&quot;Warning: Image is all white! All dirt values set to zero.&quot;</span>
+        <span class="n">areaDirt</span><span class="o">=</span><span class="mi">0</span>
+        <span class="n">numDirt</span><span class="o">=</span><span class="mi">0</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+        <span class="n">labeledFoil</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="c"># Generate return tuple:</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">areaDirt</span><span class="p">,</span> <span class="n">numDirt</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">returnSizes</span><span class="p">:</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">returnLabelled</span><span class="p">:</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">labeledFoil</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+        
+    <span class="k">if</span> <span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">!=</span><span class="mi">0</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">img</span><span class="p">[</span><span class="n">img</span><span class="o">!=</span><span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">()]</span><span class="o">!=</span><span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            ERROR: Image must be a binary image of 0 and a non-zero number.\n</span>
+<span class="sd">            Image Max: {0} \n</span>
+<span class="sd">            Image Min: {1} \n</span>
+<span class="sd">            Other values: {2}&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                                        <span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+                                        <span class="n">img</span><span class="p">[(</span><span class="n">img</span><span class="o">!=</span><span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">&amp;</span><span class="p">(</span><span class="n">img</span><span class="o">!=</span><span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">())]))</span>
+    
+    <span class="c">#inv = cv2.bitwise_not(img)</span>
+    <span class="c">#invDirt = cv2.bitwise_not(isoDirt(img,profile))</span>
+    <span class="c"># Make a 3x3 matrix of ones as the structuring element so that any of the 8 nearest</span>
+    <span class="c"># neighbors are all considered part of the same region. </span>
+    <span class="n">labeledFoil</span><span class="p">,</span><span class="n">numDirt</span> <span class="o">=</span> <span class="n">mh</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">Bc</span><span class="o">=</span><span class="n">BoundConds</span><span class="p">)</span>
+    
+    <span class="c">#Calculate the area of the dirt using Findcontours</span>
+    <span class="n">sizes</span> <span class="o">=</span> <span class="n">mh</span><span class="o">.</span><span class="n">labeled</span><span class="o">.</span><span class="n">labeled_size</span><span class="p">(</span><span class="n">labeledFoil</span><span class="p">)</span>
+    <span class="c"># Sort sizes of particles by size in descending order:</span>
+    <span class="n">sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sizes</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c"># Eliminate the background from the &quot;sizes&quot; array:</span>
+    <span class="c"># If the image includes the background and the foil, </span>
+    <span class="c"># they will be largest and second-largest regions in the sizes area</span>
+    <span class="k">if</span> <span class="n">foilIncluded</span><span class="p">:</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="n">sizes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="c"># Don&#39;t count the foil in numDirt:</span>
+        <span class="n">numDirt</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="c"># Otherwise just eliminate the background region:</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="n">sizes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="c"># Consider the minimum in pixels:</span>
+    <span class="n">minPartPx</span> <span class="o">=</span> <span class="n">minPartArea</span><span class="o">/</span><span class="n">res</span>
+    <span class="n">sizes</span><span class="p">[</span><span class="n">sizes</span><span class="o">&lt;</span><span class="n">minPartPx</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">sizes</span> <span class="o">=</span> <span class="n">sizes</span><span class="p">[</span><span class="n">sizes</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c"># Total area of dirt is equal to the sum of the sizes. </span>
+    <span class="c"># In square microns unless otherwise specified.</span>
+    <span class="n">areaDirt</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span><span class="o">*</span><span class="n">res</span>
+    <span class="c"># If specified, convert area to square mm</span>
+    <span class="k">if</span> <span class="n">getAreaInSquaremm</span><span class="p">:</span>
+        <span class="n">areaDirt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">areaDirt</span><span class="o">*</span><span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">)</span>
+    <span class="c"># Generate return tuple:</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">[</span><span class="n">areaDirt</span><span class="p">,</span> <span class="n">numDirt</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">returnSizes</span><span class="p">:</span>
+        <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">returnLabelled</span><span class="p">:</span>
+        <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">labeledFoil</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+    
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="getDirtSizeData"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.getDirtSizeData">[docs]</a><span class="k">def</span> <span class="nf">getDirtSizeData</span><span class="p">(</span><span class="n">DirtSizes</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Receives the dirt particle size array and the resolution of the image and </span>
+<span class="sd">    returns some data on the particle sizes.</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - DirtSizes - 1-dimensional ndarray of dirt sizes in pixels.</span>
+<span class="sd">        - res - resolution of the image in square microns/pixel area</span>
+<span class="sd">    Returns a tuple containing:</span>
+<span class="sd">        - MeanSize - Mean dirt particle area in square microns</span>
+<span class="sd">        - MaxSize - Max dirt particle area in square microns</span>
+<span class="sd">        - percAreaOver100 - Percent of particles with an approximate diameter </span>
+<span class="sd">                            greater than 100 microns</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">DirtSizes</span><span class="o">.</span><span class="n">size</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">MeanSize</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">MaxSize</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">percAreaOver100</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">DirtSizes</span> <span class="o">=</span> <span class="n">DirtSizes</span><span class="o">*</span><span class="n">res</span>
+        <span class="n">MeanSize</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">DirtSizes</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">MaxSize</span> <span class="o">=</span> <span class="n">DirtSizes</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="c"># Number of Particles with a diameter approximately over 100 microns,</span>
+        <span class="c"># Corresponding to an area of ~7854 square microns. </span>
+        <span class="n">areaOver100</span> <span class="o">=</span> <span class="n">DirtSizes</span><span class="p">[</span><span class="n">DirtSizes</span><span class="o">&gt;</span><span class="mi">7850</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">percAreaOver100</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">areaOver100</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">DirtSizes</span><span class="o">.</span><span class="n">sum</span><span class="p">())),</span><span class="mi">2</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">MeanSize</span><span class="p">,</span> <span class="n">MaxSize</span><span class="p">,</span> <span class="n">percAreaOver100</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+</div>
+<div class="viewcode-block" id="makeSizeHistogram"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.makeSizeHistogram">[docs]</a><span class="k">def</span> <span class="nf">makeSizeHistogram</span><span class="p">(</span><span class="n">sizes</span><span class="p">,</span> <span class="n">res</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Makes a histogram of the dirt size data</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">        - sizes - a 1-dimensional numpy ndarray listing out the sizes (areas)</span>
+<span class="sd">                    of each dirt particle in pixels </span>
+<span class="sd">        - res - resolution of the image in square microns/pixel area</span>
+<span class="sd">        - name - name of the image to be the title of the histogram plot</span>
+<span class="sd">        - path - path to folder to which the histogram plot will be saved. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">AreaSizes</span> <span class="o">=</span> <span class="n">sizes</span><span class="o">*</span><span class="n">res</span>
+    <span class="n">histoRange</span> <span class="o">=</span> <span class="n">AreaSizes</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">sizeHist</span><span class="p">,</span><span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">AreaSizes</span><span class="p">,</span><span class="n">bins</span><span class="o">=</span><span class="n">histoRange</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">histoRange</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">normHistoByArea</span> <span class="o">=</span> <span class="n">sizeHist</span><span class="o">*</span><span class="n">x</span>
+    <span class="n">FIG</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">PLT</span> <span class="o">=</span> <span class="n">FIG</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+    <span class="n">FIG</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">name</span><span class="o">+</span><span class="s">&quot; Histograms&quot;</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Particle Size in square Microns&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Count&quot;</span><span class="p">)</span>
+    <span class="n">PLT</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">normHistoByArea</span><span class="p">)</span>
+    <span class="n">FIG</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;_DirtPartSize_Hist.png&quot;</span><span class="p">))</span>
+    <span class="k">print</span> <span class="s">&quot;Histogram plot for &quot;</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&quot; finished.&quot;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c">####################################################################################</span>
+
+<span class="c">####################################################################################</span>
+               
+<span class="c"># ERROR CLASSES:</span></div>
+<div class="viewcode-block" id="MeasError"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.MeasError">[docs]</a><span class="k">class</span> <span class="nc">MeasError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generic error for the measure module&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="AllWhiteError"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.AllWhiteError">[docs]</a><span class="k">class</span> <span class="nc">AllWhiteError</span><span class="p">(</span><span class="n">MeasError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Error if image is all white&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span>
+        </div>
+<div class="viewcode-block" id="AllBlackError"><a class="viewcode-back" href="../../GenSIP.html#GenSIP.measure.AllBlackError">[docs]</a><span class="k">class</span> <span class="nc">AllBlackError</span><span class="p">(</span><span class="n">MeasError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Error if image is all black&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span>
+
+    
+              
+
+                
+                
+                </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

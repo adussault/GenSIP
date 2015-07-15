@@ -1,14 +1,20 @@
 """
-_________________
-HISTOGRAMS MODULE\______________________________________________________________
+histogram_tools
+Contains functions that identify features in the histogram of an image or region
+in an image and determine the platinum or dirt threshold values. 
 
 """   
 
 import numpy as np
 import GenSIP.histomethod.datatools as dat
 
+###################################################################################
+
+###################################################################################
 
 def selectDirtThresh(sectData, verbose=True):
+    """selects the dirt threshold value given the data dictionary of a region
+    in the dictionary produced by NewRegThresh"""
     Histogram = sectData['Histogram']
     MoPeak = sectData['MoPeak']
     Pot_Infl = sectData['PosInfl'][sectData['PosInfl']<MoPeak]
@@ -35,6 +41,10 @@ def selectDirtThresh(sectData, verbose=True):
     #        pass
     return Dirt_Thresh
     
+###################################################################################
+
+###################################################################################
+
 def selectPtThresh(sectData, verbose=True):
     """
     Takes the data dictionary of a specific region and uses the Histogram to determine
@@ -84,53 +94,10 @@ def selectPtThresh(sectData, verbose=True):
         PtThresh = 100
     if verbose: print "Pt Thresh: " + str(PtThresh)
     return int(PtThresh)
-    
-def IDPeaks(img):
-    #PtMax = np.max(img)
-    #DirtCrackMin = np.min(img)
-    MoX, histo = findMoPeakByImg(img)
-    #x = np.arange(256)
-    PksX,PksY = dat.getMaxima(histo)
-    ValX,ValY = dat.getMinima(histo)
-    PksX,PksY = np.asarray(PksX),np.asarray(PksY)
-    ValX,ValY = np.asarray(ValX),np.asarray(ValY)
-    
-    dif = [abs(i-MoX) for i in PksX]
-    dif = np.asarray(dif)
-    # ID Molybdenum Peak
-    MoPkX = PksX[dif.argmin()]
-    #MoPkY = histo[MoX]
-    
-    # Platinum Peak assumed to be the largest peak with a higher graylevel value than the Mo peak
-    
-    PtX,PtY = PksX[PksX>MoPkX],PksY[PksX>MoPkX]
-    PtPkX = PksX[PksY.argmax()]
-    
-    # Find Valley between the Mo and Pt Peaks
-    MoPtX,MoPtY = ValX[(MoPkX<ValX)&(ValX<PtPkX)],ValY[(MoPkX<ValX)&(ValX<PtPkX)]
-    #MoPtValX = MoPtX[MoPtY.argmin()]
-    
-    
-    
-    
-"""
-_______________________
-THRESHOLDING OPERATIONS\________________________________________________________
 
-"""      
-    
-        
-def threshMo(img):
-    peakVal, histo = findMoPeakByImg(img)
-    MIN,MAX = dat.atFWHM(histo,peakVal)
-    thresh = dat.easyThresh(img,MIN,MAX,Binary=True)
-    return thresh
+###################################################################################
 
-def threshPt(img):
-    return (img==255)
-    
-def threshCrack(img):
-    return (img==0)
+###################################################################################
 
 def findMoPeakByImg(img, returnHist = False):
     """
@@ -158,26 +125,5 @@ def findMoPeakByImg(img, returnHist = False):
     else:
         return firstPeak
 
-'''
-def findMoPeakByHistogram(histo):
-    """
-    Takes the histogram of an image and determines the likely maximum of the 
-    Molybdenum peak. Returns the pixel value (0 to 255) of the maximum of the 
-    molybdenum peak.
-    """
-    #Darkest = min(img)
-    #Lightest = max(img)
-    histo = np.histogram(img,256,(0,255))
-    histo8 = np.histogram(img,32,(0,255))
-    counts = histo[0]
-    #Smoothed = dat.smoothed(counts)
-    
-    #widths = np.ones(Smoothed.shape)
-    
-    M = histo8[0].argmax()*8
-    firstPeak = counts[M:M+8].argmax()+M
-    firstPeak = int(firstPeak)
-    return firstPeak,counts
-'''
 
         

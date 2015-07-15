@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+Contains generic image analysis functions that put the various methods in GenSIP
+together under one roof.
+"""
+
 import cv2
 import os
 import numpy as np
@@ -61,6 +66,8 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
         - compToStds = False - Currently not used for anything. Would like to 
                     turn this option into a means of directly comparing the 
                     results of one method to the standard results
+        - retDataAndPicts = False - returns the Data and Pictures instead of 
+                    writing them to image and CSV files. 
 
     EXAMPLE:
         > analyzImgOrFolder ("InputPicts/Folder/",16,MoDirt='mo',method='cleantests')
@@ -78,6 +85,7 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
     verbose = kwargs.get('verbose',False)
     autoMask = kwargs.get('autoMaskEdges',False)
     stdDir = kwargs.get('stdDir', 'standards/')
+    retDataAndPicts = kwargs.get('retDataAndPicts', False)
     
     # Standardize MoDirt to 'mo' or 'dirt' using checkMoDirt
     MoDirt = fun.checkMoDirt(MoDirt)
@@ -98,7 +106,7 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
         raise Exception("Invalid path name: %s" % path)
         
     # Generate output folders
-    outFolder = "Output/Output_"+name+'_'+method
+    outFolder = kwargs.get('outDir',"Output/Output_"+name+'_'+method)
     
     if genPoster: posterFolder = outFolder+'/PosterMaps/'
     
@@ -106,10 +114,10 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
         mapFolder = os.path.join(outFolder,'PtMaps/')
     else:
         mapFolder = os.path.join(outFolder,'DirtMaps/')
-        
-    if not os.path.exists(mapFolder): os.makedirs(mapFolder)
-    if not os.path.exists(mapFolder): os.makedirs(mapFolder)
-    if genPoster and not os.path.exists(posterFolder): os.makedirs(posterFolder)
+    if not retDataAndPicts:
+        if not os.path.exists(mapFolder): os.makedirs(mapFolder)
+        if not os.path.exists(mapFolder): os.makedirs(mapFolder)
+        if genPoster and not os.path.exists(posterFolder): os.makedirs(posterFolder)
     
     # Verbose Feedback:
     if verbose: 
@@ -133,7 +141,7 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
     # and run analyzeImg on each of image, then write the results to the Data 
     # Dictionary. 
     Data = {}
-    
+    if retDataAndPicts: PictData = {}
     # OPERATE ON FOLDER OF IMAGES ==============================================
     if os.path.isdir(path):
         
@@ -189,12 +197,17 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
             threshed[threshed!=0]=255
             poster = poster.astype(np.uint8)
             
-            # Create the output images
-            cv2.imwrite(mapFolder+imgName+'.png',
-                        threshed, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-            if genPoster:
-                cv2.imwrite(posterFolder+imgName+'.png',
-                            poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            if not retDataAndPicts:
+                # Create the output images
+                cv2.imwrite(mapFolder+imgName+'.png',
+                            threshed, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+                if genPoster:
+                    cv2.imwrite(posterFolder+imgName+'.png',
+                                poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            else:
+                PictData[imgName] = {"threshed":threshed}
+                if genPoster: PictData[imgName]["poster"] = poster
+                    
                             
     # OPERATE ON A SINGLE IMAGE ================================================
     else:
@@ -216,30 +229,81 @@ def analyzImgOrFolder (path, res, method="cleantests", **kwargs):
         threshed[threshed!=0]=255
         poster = poster.astype(np.uint8)
         poster[poster!=0]=255
-        # Create the output images
-        cv2.imwrite(mapFolder+name+'.png',
-                    threshed, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-        if genPoster:
-            cv2.imwrite(posterFolder+name+'.png',
-                        poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-                        
-    """Write the output to a CSV file"""
-    filePath = os.path.join(outFolder,MoDirt.capitalize()+'_ouput_'+name+'.csv')
-    CSV = gencsv.DataToCSV(filePath, name+': '+method+' method of analysis')   
-    CSV.writeDataFromDict(Data,FirstColHead='Image')
-    CSV.closeCSVFile() 
+        if not retDataAndPicts:
+            # Create the output images
+            cv2.imwrite(mapFolder+name+'.png',
+                        threshed, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            if genPoster:
+                cv2.imwrite(posterFolder+name+'.png',
+                            poster, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+        else:
+            PictData[name] = {"threshed":threshed}
+            if genPoster: PictData[imgName]["poster"] = poster    
             
+    if retDataAndPicts:
+        return Data, PictData
+    else:
+        # Write the output to a CSV file
+        filePath = os.path.join(outFolder,MoDirt.capitalize()+'_ouput_'+name+'.csv')
+        CSV = gencsv.DataToCSV(filePath, name+': '+method+' method of analysis')   
+        CSV.writeDataFromDict(Data,FirstColHead='Image')
+        CSV.closeCSVFile() 
+    
 ################################################################################
 
 ################################################################################
 
-def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, name='',
-                 autoMaskEdges=False, stdDir='standards/', outDir="Output/",verbose=False):
+def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, 
+                 autoMaskEdges=False, **kwargs):
     """
     Given the path, runs analysis on a single image using one of the methods in
     GenSIP specified by the 'method' kwarg (currently: cleantests or bigfoils). 
     Returns a Data Dictionary and the thresholded image and poster.
+    Inputs:
+        - path - path to the image to be analyzed
+        - res - resolution of the image, in microns^2/pixel area
+        
+    KEY-WORD ARGUMENTS:
+        - method =  "cleantests" - the method to use to analyze the image.
+                    Can be one of the following:
+                        cleantests - method used by cleantests.dirt and moly
+                        bigfoils - method used by bigscans.bigfoils
+                        histogram - new method developed that automatically assigns
+                            threshold values based on the histogram of the image.
+                            Currently analyzImgOrFolder is the most refined means
+                            of using the histogram module. 
+                        standards - this method works by accessing the manually 
+                            thresholded images stored in standards/all_dirt/ and 
+                            standards/all_plat/ inside the current working 
+                            directory, and calculates the platinum or dirt data
+                            directly from those thresholded images. The path variable 
+                            must be a folder of the standard images. 
+        - MoDirt = 'Mo' - option to do molybdenum or dirt analysis
+        - Mask = 0 - option to include a path string to either a single mask (in 
+                    the case that the path variable links to a single image) or 
+                    a folder of masks with the same name as the image they corre-
+                    spond to. i.e. the image is "Images/sub_img_004_003.png" and the 
+                    mask is at "masks/sub_img_004_003.png"
+        - autoMaskEdges = False - allows the bigfoil and histogram methods to work
+                    with individual foils like the cleantest method by automatically 
+                    masking off the dark background around the foil.If this option
+                    is set to True, then any input for the Mask variable is over
+                    -ridden.
+        - stdDir = "standards/" - sets the directory containing the standards in
+                    the "all_stds/", "all_plat/", "all_dirt/" and "all_masks" directories.
+        - name = '' - name of the image. Used when making the histogram image for
+                    the histogram method. 
+        - outDir = "Output/" - specifies the directory to output. Used when making
+                    the histogram image for the histogram method. 
+        - verbose = False - makes the function verbose.
+    
     """
+    # The rest of the key-word arguments
+    stdDir=kwargs.get('stdDir','standards/')
+    name=kwargs.get('name','')
+    outDir=kwargs.get('outDir',"Output/")
+    verbose=kwargs.get('verbose',False)
+    
     
     img = fun.loadImg(path)
     MoDirt = fun.checkMoDirt(MoDirt)
@@ -297,14 +361,14 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, name='',
         elif method.lower() in ['newmethod', 'histograms', 'histo', 'histogram', 'hist']:
             stats, picts = analyzeByHisto (img, res, 
                                            Mask=mask, verbose=verbose,
-                                           MoDirt=MoDirt, returnPoster=True,
+                                           MoDirt=MoDirt, genPoster=True,
                                            returnData=True,returnSizes=False)
             (PtArea,
             PercPt,
             FoilArea,
             Data) = stats
             
-            dis.saveHist(Data, outDir, name=name)
+            dis.saveHist(Data, outDir, name=name, verbose=verbose)
             
             MolyArea = FoilArea-PtArea
             MolyMass = MolyArea*.3*10.2 #moly mass in micrograms
@@ -356,14 +420,19 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, name='',
             (DirtNum,
              DirtArea,
              threshed,
-             DirtSizes) = dirtnalysis (img, res, MaskEdges=True, retSizes=True)
+             DirtSizes) = dirtnalysis (img, res, 
+                                       MaskEdges=True, 
+                                       retSizes=True, 
+                                       verbose=verbose)
                          
             poster = fun.makePoster(img)
             
-        # Method used by bigfoils  –––––––––––––––––––––––––––––––––––––
+        # Method used by bigfoils ––––––––––––––––––––––––––––––––––––––
         elif method.lower() in ['bigfoils','big','bigscans','no border']:
             stats, picts = ImgAnalysis(img, mask, res, 
-                                       MoDirt=MoDirt,returnSizes=True)
+                                       MoDirt=MoDirt,
+                                       returnSizes=True, 
+                                       verbose=verbose)
             (DirtNum,
              DirtArea,
              AreaFoil,
@@ -375,16 +444,19 @@ def analyzeImage(path, res, method='cleantests', MoDirt='mo', Mask=0, name='',
         # Method Used by Histogram Analysis (newmethod) ––––––––––––––––––––
         elif method.lower() in ['newmethod', 'histograms', 'histo', 'histogram']:
             stats, picts = analyzeByHisto (img, res, 
-                                           Mask=mask, verbose=verbose,
-                                           MoDirt=MoDirt, returnPoster=True,
-                                           returnData=True,returnSizes=True)
+                                           Mask=mask, 
+                                           verbose=verbose,
+                                           MoDirt=MoDirt, 
+                                           genPoster=True,
+                                           returnData=True,
+                                           returnSizes=True)
             (DirtNum,
              DirtArea,
              DirtSizes,
              AreaFoil,
              Data) = stats
             
-            dis.saveHist(Data, outDir, name=name)
+            dis.saveHist(Data, outDir, name=name, verbose=verbose)
             
             (threshed, poster) = picts
             
@@ -446,7 +518,7 @@ def ifFloatRound(num, rnd):
     Otherwise just return num. 
     Prevents errors by rounding strings
     """
-    if type(num) == float: return round(num,rnd)
+    if type(num) in [float, int, long]: return round(num,rnd)
     
     else: return num
 
@@ -483,11 +555,133 @@ def blankDataDict(MoDirt='mo'):
 def blankImg(dims=(100,100)):
     """Creates a white image given the dimensions"""
     return np.ones(dims)*255
+            
+################################################################################
+
+################################################################################
+def makeStandardReport(res, MoDirt = "mo", stdDir="standards/", verbose=False):
+    """ 
+    Given the resolution, creates a CSV file that compares each of the methods to
+    the standard method side-by-side. 
+    
+    INPUTS:
+        - res - resolution of the image, in microns^2/pixel area
+        
+    KEY-WORD ARGUMENTS:
+        - MoDirt = 'Mo' - option to do molybdenum or dirt analysis
+        - stdDir = "standards/" - sets the directory containing the standards in
+                    the "all_stds/", "all_plat/", "all_dirt/" and "all_masks" directories.
+        - verbose = False - makes the function verbose.
+    """
+    MoDirt = fun.checkMoDirt(MoDirt)
+    METHODS = ["Cleantests","Bigfoils","Histograms","Standard"]
+    all_stds = os.path.join(stdDir,"all_stds/")
+    all_masks = os.path.join(stdDir,"all_masks/")
+    all_dirt = os.path.join(stdDir, "all_dirt/")
+    all_plat = os.path.join(stdDir, "all_plat/")
+    dataDict = {}
+    retPicts = {}
+    retDict = {} # outpu dictionary to be written to CSV file
+    outFolder = "Output/Standard_Report_"+"_"+MoDirt+"_"+str(fun.getDateString(minSep='_'))+"/"
+    if not os.path.exists(outFolder): os.makedirs(outFolder)
+    if MoDirt == 'mo':
+        mapFolder = os.path.join(outFolder,'PtMaps/')
+    elif MoDirt == 'dirt':
+        mapFolder = os.path.join(outFolder,'DirtMaps/')
+    posterFolder = os.path.join(outFolder,'PosterMaps/')
+    
+    os.makedirs(mapFolder)
+    os.makedirs(posterFolder)
+    
+    for method in METHODS:
+        (dataDict[method],
+         retPicts[method]) = analyzImgOrFolder(all_stds, res, 
+                                                 method=method, 
+                                                 MoDirt=MoDirt,
+                                                 Mask=all_masks, 
+                                                 genPoster=True, 
+                                                 verbose=verbose, 
+                                                 autoMaskEdges=False, 
+                                                 stdDir=stdDir, 
+                                                 outDir=outFolder,
+                                                 retDataAndPicts=True)
+        for img in retPicts[method]:
+            cv2.imwrite(mapFolder+img+'_'+method+'.png',
+                        retPicts[method][img]['threshed'], 
+                        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+            cv2.imwrite(posterFolder+img+'_'+method+'.png',
+                        retPicts[method][img]['poster'], 
+                        [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
+        
+    # Reorganize 
+    for image in dataDict["Standard"]:
+        for entry in dataDict["Standard"][image]:
+            if not entry in retDict.keys():
+                retDict[entry] = {}
+            retDict[entry][image] = {}
+            retDict[entry][image]["Standard"] = dataDict["Standard"][image][entry]
+    # Populate retDict and input ratio to standard output
+    for entry in retDict:
+        for image in retDict[entry]:
+            for method in METHODS[:-1]:
+                selfEntry = dataDict[method][image][entry]
+                stdEntry = dataDict['Standard'][image][entry]
+                if type(stdEntry) in [float, int, long] and stdEntry != 0:
+                    ratToStd = round(float(selfEntry)/stdEntry,2)
+                else:
+                    ratToStd = 0
+                retDict[entry][image][method] = selfEntry
+                retDict[entry][image][method+" Error Ratio to Stnd"] = ratToStd
+        
+        Images = [i for i in retDict[entry].keys()]
+        retDict[entry]["Average Err Ratio"] = {}
+        retDict[entry]["Err Ratio StdDev"] = {}
+        retDict[entry]["Average % Error"] = {}
+        ErrRats = [e for e in retDict[entry][image].keys() if e.endswith(" Error Ratio to Stnd")]
+        for errRat in ErrRats:
+            Rats = np.zeros((len(Images),)).astype(np.float32)
+            for i in range(len(Images)):
+                Rats[i] = retDict[entry][Images[i]][errRat]
+            method = errRat[:-20]
+            Ave = Rats[Rats!=0].mean()
+            StdDev = Rats[Rats!=0].std()
+            AvePercErr = (Ave-1)*100
+
+            retDict[entry]["Average Err Ratio"][method] = ifFloatRound(Ave,3)
+            retDict[entry]["Err Ratio StdDev"][method] = ifFloatRound(StdDev,3)
+            retDict[entry]["Average % Error"][method] = ifFloatRound(AvePercErr,3)
+    
+    ColHeaders = ["Image", 
+                  "Standard",
+                  "Cleantests",
+                  "Bigfoils", 
+                  "Histograms",
+                  "Bigfoils Error Ratio to Stnd",
+                  "Cleantests Error Ratio to Stnd",
+                  "Histograms Error Ratio to Stnd"]
+    Footer = ["Average Err Ratio", "Err Ratio StdDev", "Average % Error"]
+
+    
+    # Write the output to a CSV file
+    filePath = os.path.join(outFolder,"Standard_Report.csv")
+    Title = "Standard Comparison Report " + str(fun.getDateString(minSep=':'))
+    CSV = gencsv.DataToCSV(filePath, Title) 
+    for entry in retDict:
+        CSV.writeRows([[entry],[]])
+        CSV.writeDataFromDict(retDict[entry],colHeads=ColHeaders,footerItems=Footer)
+        CSV.writeRows([[],[]])
+    CSV.closeCSVFile() 
+
+    print "Standard report made."
+    return retDict, dataDict
+    
+        
+
 
 ################################################################################
 
 ################################################################################
-# 
+
 def compareToStandards(method, res, STDpath='standards/all_stds'):
     """Creates a csv file of the standard data"""
     dirtFolder = os.path.join(STDpath,'all_dirt')

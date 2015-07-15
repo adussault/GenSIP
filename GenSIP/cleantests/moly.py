@@ -1,6 +1,7 @@
-# This module contains all the functions necessary for analyzing the molybdenum loss
-# on the foils. 
-
+"""
+This module contains the functions necessary for analyzing the molybdenum loss
+on individual foils due to a cleaning test. 
+"""
 import cv2
 import os
 import numpy as np
@@ -22,7 +23,9 @@ def analyzeMoly (sss, res, verbose=False):
         Inputs:
         - sss -  The Sample Set String, a short identifier for whichever set
                 of SEM scans you are running.
-        - res - Resolution of the image, in square microns per pixel.     
+        - res - Resolution of the image, in square microns per pixel.   
+        Key-Word Arguments:
+        - verbose = False - prints verbose output if set to True.            
     """
         
     # Declare a list of acceptable file types: tif and jpg
@@ -110,101 +113,15 @@ def analyzeMoly (sss, res, verbose=False):
 ####################################################################################
 
 ####################################################################################
-"""
-def analyzeMoly_Single(sss,res,verbose=False):
-    # Declare a list of acceptable file types: tif and jpg
-    filetypes = ['.tif', '.jpg', '.jpeg','.tiff']
-    # Make list of files in the corresponding Before and After folders
-    befpics = sorted(os.listdir('InputPicts/Before/Before_'+sss))
-    aftpics = sorted(os.listdir('InputPicts/After/After_'+sss))
-    
-    # Make output folder if does not exist
-    if not os.path.exists('Output/Output_'+sss):
-        os.makedirs('Output/Output_'+sss)
-    if not os.path.exists('Output/Output_'+sss+'/PtMaps'):
-        os.makedirs('Output/Output_'+sss+'/PtMaps')
-        
-    Data = {}
-    # fn stands for filename. befpics is a list of the filenames in the folder 
-    # containing the before pictures
-    for fn in befpics:
-        filename,exten = os.path.splitext(fn)
-	befpath = 'InputPicts/Before/Before_'+sss+'/'+fn
-	if exten in filetypes:
-	    # Get number of current foil
-            foilnum = filename.split()[0]
-            if verbose: print "Now comparing foil %s" %foilnum
-            aftfoil = foilnum + ' after clean' + exten
-            aftpath = 'InputPicts/After/After_'+sss+'/'+aftfoil
-            # Check to see if the corresponding picture is in the after folder
-            if aftfoil in aftpics:
-                befImg = fun.loadImg(befpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-                aftImg = fun.loadImg(aftpath, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-                # Compare the two images:
-                Ptvals, PtPicts = MoComp(befImg,aftImg, res,verbose=verbose)
-		(PtAreabf,
-		 PtAreaaf,
-		 areaLoss,
-		 Moloss,
-		 PctMo) = Ptvals
-		(Ptbef, 
-		 Ptaft) = PtPicts
-		
-		# Create the output images
-		cv2.imwrite('Output/Output_'+sss+'/PtMaps/'+foilnum+' before_threshed.png',\
-		 Ptbef, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-		cv2.imwrite('Output/Output_'+sss+'/PtMaps/'+foilnum+' after_threshed.png',\
-		 Ptaft, [cv2.cv.CV_IMWRITE_PNG_COMPRESSION,6])
-		 
-		# Write the output to a new line in the csv file
-		Data[foilnum] = {'Pt Area Before (mm^2)':PtAreabf, 
-		                 'Pt Area After (mm^2)':PtAreaaf, 
-                                 'Area of Mo Loss (mm^2)':areaLoss, 
-                                 'Approx Mo Loss (micrograms)':round(Moloss,2),
-                                 '% Mo lost':PctMo}
-            else: print "No after image for foil "+foilnum
-        else:
-            print "Not a picture: %s" % filename
-            
-    '''Write results Data to a .csv file'''
-    # Make dirt and Pt output csv files and corresponding writers
-    filePath = 'Output/Output_'+sss+'/Mo_output_'+sss+'.csv'
-    PtCSV = gencsv.DataToCSV(filePath, sss)
-    
-    # Make column titles:
-    ColHeaders = ['Foil #',
-                  'Pt Area Before (mm^2)', 
-                  'Pt Area After (mm^2)', 
-                  'Area of Mo Loss (mm^2)', 
-                  'Approx Mo Loss (micrograms)',
-                  '% Mo lost']
-                  
-    # Write the Data to the CSV file
-    PtCSV.writeDataFromDict(Data,colHeads=ColHeaders)
-    PtCSV.closeCSVFile()
-    
-    # Check to see if any foils have an after picture but not a before picture:
-    for fn in aftpics:
-        filename,exten = os.path.splitext(fn)
-        foilnum = filename.split()[0]
-        beffoil = foilnum + ' before clean' + exten
-        if exten in filetypes:
-            if not(beffoil in(befpics)):
-                print "No before image for foil "+ foilnum
-        else:
-            print "Not a picture: " + fn
-"""
-
-
-####################################################################################
-
-####################################################################################
 
 def MoComp (beforeImg, afterImg, res, verbose=False):
     """
-    This is the exposed platinum compare foils function. It takes the pathnamess of two images (before
-    and after) and the image resolution, in square microns per pixel. Default set to 1.
+    This is the exposed platinum compare foils function. It takes the pathnames 
+    of two images (before and after) and the image resolution, in square microns
+    per pixel. 
+    
     NOTE: This function assumes before and after images have the same resolution!
+    
     MoComp returns two tuples: 
        -The first tuple contains the area of exposed platinum before and after 
         cleaning, the area of moly loss, the micrograms of moly lost, and the 
@@ -267,9 +184,22 @@ def MoComp (beforeImg, afterImg, res, verbose=False):
 ####################################################################################
 
 def Monalysis(img, res, verbose=False):
-
+    """
+    Runs molybdenum analysis on a given image. 
+        Inputs: 
+        - img - image as a numpy.ndarray
+        - res - resolution of the image in square microns/pixel
+        Key-Word Arguments:
+        - verbose = False - prints verbose output if set to True.
+        Returns a tuple containing:
+            PtArea - area of exposed platinum in square microns
+            MolyArea - area of the molybdenum in the image in square microns
+            MolyMass - mass of the molybdenum on the foil in micrograms
+            PtImg - the platinum thresholded image as a numpy ndarray
+    """
+        
     # Generate binary thresholds for Platinum:
-    PtImg = isolatePt(img)
+    PtImg = isolatePt(img, verbose=verbose)
 
     # Approximate the percent of molybdenum lost:
     # Get the approximate foil area in square millimeters
@@ -304,7 +234,7 @@ def Monalysis(img, res, verbose=False):
 
 ####################################################################################
 
-def isolatePt (image):
+def isolatePt (image, verbose=False):
     """
     This function filters and thresholds the image using regionalThres in order 
     to estimate the area of exposed Pt. Argument "image" must be ndarray.
@@ -319,31 +249,10 @@ def isolatePt (image):
                                pt=180,
                                gaussBlur=3,
                                MaskEdges=False,
-                               MoDirt='mo')
+                               MoDirt='mo',
+                               verbose=verbose)
                                
     # Make the image into a boolean image
     isoPt = isoPt.astype(np.bool_)
     
     return isoPt
-
-####################################################################################
-
-####################################################################################
-'''
-EXTRA and OUTDATED CODE:
-    	
-def calcPtArea(img, comp=True):
-    """
-    This function calculates the area of Pt in a binary thresholded image of the foil.
-    Calculate WHITE or BLACK area in a binary (boolean) image by counting pixels.
-    """
-    if str(img.dtype) == 'bool':
-        if comp == False:
-            inv = np.logical_not(img)
-            return np.sum(inv)
-        else:
-            return np.sum(img)
-    else:
-        print "Only accept binary images!"
-
-'''

@@ -1,3 +1,5 @@
+"""Object oriented approach to foil analysis. Abandoned."""
+
 import GenSIP.functions as funcs
 import cv2
 import numpy as np
